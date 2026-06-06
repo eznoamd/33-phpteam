@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Cadastro{% endblock %}
+
+{% block content %}
+<div style="max-width:400px; margin:4rem auto;">
+
+  <div class="page-header text-center">
+    <h1>criar conta</h1>
+    <p>já tem conta? <a href="/login" style="color:var(--accent); text-decoration:none;">faça login</a></p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/cadastro">
+
+      <div class="form-group">
+        <label for="nome">nome</label>
+        <input type="text" id="nome" name="nome" required autofocus
+               placeholder="Seu Nome"
+               value="{{ nome_anterior or '' }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="email">e-mail</label>
+        <input type="email" id="email" name="email" required
+               placeholder="seu@email.com"
+               value="{{ email_anterior or '' }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="senha">
+          senha <span class="text-muted">(mín. 6 caracteres)</span>
+        </label>
+        <input type="password" id="senha" name="senha" required
+               placeholder="••••••••" />
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-2">criar conta →</button>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

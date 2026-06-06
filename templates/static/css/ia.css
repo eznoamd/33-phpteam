@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════
+   ia.css — Estilos da página de chat com Gemini
+   ═══════════════════════════════════════════════ */
+
+#chat-box {
+  min-height: 300px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 0;
+  margin-bottom: 1.25rem;
+}
+
+.msg {
+  max-width: 80%;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #0e0e10;
+  border-bottom-right-radius: 2px;
+}
+
+.msg.model {
+  align-self: flex-start;
+  background: var(--border);
+  color: var(--text);
+  border-bottom-left-radius: 2px;
+}
+
+.msg.loading { opacity: 0.5; font-style: italic; }
+
+.chat-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.chat-input-row textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 140px;
+  resize: none;
+}
+
+.chat-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.chat-toolbar input {
+  flex: 1;
+  min-width: 200px;
+}

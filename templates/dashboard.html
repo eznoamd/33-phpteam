@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Cabeçalho da página ── -->
+<div class="page-header flex items-center justify-between">
+  <div>
+    <h1>olá, {{ session_usuario.nome.split()[0] }} 👋</h1>
+    <p>{{ session_usuario.email }}</p>
+  </div>
+  <span class="badge badge-green">ativo</span>
+</div>
+
+<!-- ── Cards de resumo ── -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
+
+  <div class="card" style="margin:0;">
+    <div class="card-title">seu id</div>
+    <div style="font-family:var(--mono); font-size:1.5rem; color:var(--accent);">
+      #{{ session_usuario.id }}
+    </div>
+  </div>
+
+  <div class="card" style="margin:0;">
+    <div class="card-title">api docs</div>
+    <a href="/docs" target="_blank" class="btn btn-secondary" style="margin-top:0.25rem;">
+      abrir /docs ↗
+    </a>
+  </div>
+
+  <div class="card" style="margin:0;">
+    <div class="card-title">ia (gemini)</div>
+    <a href="/ia" class="btn btn-secondary" style="margin-top:0.25rem;">
+      testar ia →
+    </a>
+  </div>
+
+</div>
+
+<!-- ── Listagem de usuários ── -->
+<div class="card">
+  <div class="card-title">usuários cadastrados</div>
+
+  {% if usuarios %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>nome</th>
+        <th>e-mail</th>
+        <th>status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td style="color:var(--muted); font-family:var(--mono); font-size:0.8rem;">{{ u.id }}</td>
+        <td>{{ u.nome }}</td>
+        <td style="color:var(--muted);">{{ u.email }}</td>
+        <td>
+          {% if u.ativo %}
+            <span class="badge badge-green">ativo</span>
+          {% else %}
+            <span class="badge badge-red">inativo</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="text-muted">nenhum usuário encontrado.</p>
+  {% endif %}
+
+</div>
+
+{% endblock %}

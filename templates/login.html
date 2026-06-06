@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div style="max-width:400px; margin:4rem auto;">
+
+  <div class="page-header text-center">
+    <h1>login</h1>
+    <p>não tem conta? <a href="/cadastro" style="color:var(--accent); text-decoration:none;">cadastre-se</a></p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/auth/login-form">
+
+      <div class="form-group">
+        <label for="email">e-mail</label>
+        <input type="email" id="email" name="email" required autofocus
+               placeholder="seu@email.com"
+               value="{{ email_anterior or '' }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="senha">senha</label>
+        <input type="password" id="senha" name="senha" required
+               placeholder="••••••••" />
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-2">entrar →</button>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

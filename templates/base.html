@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CodeRace{% endblock %}</title>
+
+  <!-- Fontes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/static/css/main.css">
+
+  <!-- CSS extra por página (opcional) -->
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Navegação ─────────────────────────────────── -->
+<nav>
+  <a href="/" class="nav-logo">▸ coderace</a>
+  <div class="nav-links">
+    {% if session_usuario %}
+      <a href="/dashboard" {% if request.url.path == '/dashboard' %}class="active"{% endif %}>dashboard</a>
+      <a href="/ia"        {% if request.url.path == '/ia'        %}class="active"{% endif %}>ia</a>
+      <a href="/auth/logout">sair</a>
+    {% else %}
+      <a href="/login"    {% if request.url.path == '/login'    %}class="active"{% endif %}>login</a>
+      <a href="/cadastro" {% if request.url.path == '/cadastro' %}class="active"{% endif %}>cadastro</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ── Conteúdo principal ─────────────────────────── -->
+<div class="container">
+
+  <!-- Flash messages (limpas automaticamente via cookie em web.py) -->
+  {% for msg in flash_messages %}
+    <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+  {% endfor %}
+
+  {% block content %}{% endblock %}
+
+</div>
+
+<!-- JS global (opcional) -->
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

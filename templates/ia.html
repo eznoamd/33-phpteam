@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}IA — Gemini{% endblock %}
+
+<!-- CSS específico desta página -->
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/ia.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>ia / gemini</h1>
+  <p>
+    chat direto com o modelo. requer
+    <code style="font-family:var(--mono); font-size:0.8rem; color:var(--accent2);">GEMINI_API_KEY</code>
+    no .env
+  </p>
+</div>
+
+<div class="card">
+  <div class="card-title">conversa</div>
+
+  <!-- Histórico de mensagens -->
+  <div id="chat-box">
+    <div class="msg model">olá! como posso ajudar?</div>
+  </div>
+
+  <!-- Campo de envio -->
+  <div class="chat-input-row">
+    <textarea id="input" placeholder="Digite sua mensagem..." rows="1"></textarea>
+    <button class="btn btn-primary" onclick="enviar()">enviar</button>
+  </div>
+
+  <!-- Instrução de sistema + limpar -->
+  <div class="chat-toolbar">
+    <span class="text-muted">sistema:</span>
+    <input type="text" id="sistema"
+           placeholder="Ex: Responda sempre em bullet points." />
+    <button class="btn btn-secondary" onclick="limpar()">limpar chat</button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+  <!-- Injeta o token antes do script -->
+  <script>window.TOKEN = "{{ token }}";</script>
+  <script src="/static/js/ia.js"></script>
+{% endblock %}

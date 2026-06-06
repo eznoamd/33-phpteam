@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}CodeRace — Início{% endblock %}
+
+{% block content %}
+<div style="text-align:center; padding: 5rem 1rem;">
+  <p style="font-family: var(--mono); font-size:0.8rem; color: var(--accent); letter-spacing:0.15em; margin-bottom:1rem;">
+    AMF / CODERACE
+  </p>
+  <h1 style="font-family: var(--mono); font-size: clamp(1.8rem, 5vw, 3rem); margin-bottom: 1rem; line-height:1.2;">
+    template base<br><span style="color:var(--accent);">pronto pra usar.</span>
+  </h1>
+  <p style="color: var(--muted); max-width: 420px; margin: 0 auto 2.5rem;">
+    Crie sua conta, faça login e comece a construir. A API está rodando em
+    <a href="/docs" style="color:var(--accent2); text-decoration:none;">/docs</a>.
+  </p>
+  <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+    <a href="/cadastro" class="btn btn-primary">criar conta</a>
+    <a href="/login"    class="btn btn-secondary">entrar</a>
+  </div>
+</div>
+{% endblock %}
