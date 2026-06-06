@@ -1,10 +1,11 @@
 /* ═══════════════════════════════════════════════════════
    AgroHub — main.css
    Paleta: Terra, Verde Campo, Branco Cru
-   Fontes: Fraunces (display serif) + Instrument Sans (body)
+   Fontes: DM Serif Display (display) + DM Sans (body)
+   Ícones: Lucide Icons (via CDN no base.html)
    ═══════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
 :root {
   /* Cores principais */
@@ -47,8 +48,8 @@
   --radius-pill:  100px;
 
   /* Tipografia */
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body:    'Instrument Sans', system-ui, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
 
   /* Sombras */
   --shadow:       0 4px 20px rgba(0, 0, 0, 0.5);
@@ -78,6 +79,12 @@ body::after {
   z-index: 9999;
   opacity: 0.5;
 }
+
+/* ── Lucide icon helper ──────────────────────────────── */
+.icon-sm { width: 14px; height: 14px; vertical-align: middle; stroke: currentColor; flex-shrink: 0; }
+.icon-md { width: 16px; height: 16px; vertical-align: middle; stroke: currentColor; flex-shrink: 0; }
+.icon-lg { width: 20px; height: 20px; vertical-align: middle; stroke: currentColor; flex-shrink: 0; }
+.icon-xl { width: 28px; height: 28px; vertical-align: middle; stroke: currentColor; flex-shrink: 0; }
 
 /* ── Navbar ─────────────────────────────────────────── */
 .navbar {
@@ -109,16 +116,16 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  color: var(--white);
 }
 
 .nav-brand-text {
   font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 400;
   font-style: italic;
   color: var(--white);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .nav-brand-text span { color: var(--verde-light); }
@@ -209,7 +216,7 @@ body::after {
 
 .sidebar-link:hover { color: var(--text); background: var(--surface-2); }
 .sidebar-link.active { color: var(--verde-light); background: var(--verde-glow); }
-.sidebar-link .icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+.sidebar-link .icon { display: flex; align-items: center; width: 20px; flex-shrink: 0; }
 
 .main { padding: 2rem 2.5rem; }
 
@@ -380,13 +387,6 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .badge-gray   { background: rgba(255,255,255,0.06); color: var(--text-muted); }
 .badge-blue   { background: rgba(21,101,192,0.15); color: #90CAF9; }
 
-/* Status específicos */
-.status-aberta          { @extend .badge-green; }
-.status-aceita          { color: #90CAF9; background: rgba(21,101,192,0.15); }
-.status-em_andamento    { color: #FFCC80; background: rgba(212,132,26,0.15); }
-.status-entregue        { color: #A5D6A7; background: rgba(46,125,50,0.15); }
-.status-cancelada       { color: #EF9A9A; background: rgba(192,57,43,0.15); }
-
 /* ── Avatar ─────────────────────────────────────────── */
 .avatar {
   width: 38px;
@@ -397,7 +397,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 400;
   font-size: 0.9rem;
   color: var(--palha);
   flex-shrink: 0;
@@ -412,10 +412,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .page-header h1 {
   font-family: var(--font-display);
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--white);
   margin-bottom: 0.3rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .page-header p { color: var(--text-muted); font-size: 0.9rem; }
 
@@ -471,7 +471,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 .stat-num {
   font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--verde-light);
   line-height: 1;
   margin-bottom: 0.2rem;
@@ -483,11 +483,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
   text-align: center;
   padding: 3.5rem 2rem;
 }
-.empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin: 0 auto 1rem;
+  color: var(--text-muted);
+}
 .empty-state h3 {
   font-family: var(--font-display);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-soft);
   margin-bottom: 0.5rem;
 }
