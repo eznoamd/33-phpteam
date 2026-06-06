@@ -1,0 +1,46 @@
+<aside class="sidebar">
+  <div class="sidebar-inner">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">dashboard</span>
+        <span>Dashboard</span>
+      </a>
+
+      {% if session_usuario and session_usuario.perfil in ['produtor', 'comprador'] %}
+      <a href="/demandas" class="sidebar-link {% if active_page == 'demandas' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">assignment</span>
+        <span>Demandas</span>
+      </a>
+      <a href="/mercado" class="sidebar-link {% if active_page == 'mercado' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">storefront</span>
+        <span>Mercado</span>
+      </a>
+      {% endif %}
+
+      {% if session_usuario and session_usuario.perfil == 'transportador' %}
+      <a href="/viagens" class="sidebar-link {% if active_page == 'viagens' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">local_shipping</span>
+        <span>Viagens</span>
+      </a>
+      {% endif %}
+
+      <a href="/meus-contratos" class="sidebar-link {% if active_page == 'contratos' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">description</span>
+        <span>Contratos</span>
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/perfil" class="sidebar-link {% if active_page == 'perfil' %}active{% endif %}">
+        <span class="icon material-symbols-rounded" aria-hidden="true">person</span>
+        <span>Meu perfil</span>
+      </a>
+      <a href="/auth/logout" class="sidebar-link sidebar-link-danger">
+        <span class="icon material-symbols-rounded" aria-hidden="true">logout</span>
+        <span>Sair</span>
+      </a>
+    </div>
+  </div>
+</aside>

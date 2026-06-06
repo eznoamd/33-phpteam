@@ -3,17 +3,9 @@
 
 {% block layout %}
 <div class="layout-sidebar">
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Principal</div>
-      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
-      <a href="/perfil"    class="sidebar-link active"><span class="icon">👤</span> Meu Perfil</a>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-label">Conta</div>
-      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
-    </div>
-  </aside>
+  {% with active_page='perfil' %}
+    {% include "partials/sidebar.html" %}
+  {% endwith %}
 
   <main class="main">
     {% for msg in flash_messages %}
