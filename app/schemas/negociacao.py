@@ -1,16 +1,20 @@
 from pydantic import BaseModel
 from datetime import date, datetime
 from typing import Optional
-
+from app.enums.produtos import *
 
 class OfertaCriar(BaseModel):
-    tipo_demanda: str  # QUERO_VENDER | QUERO_COMPRAR
-    produto: str
+    tipo_demanda: str  # Pode manter str se não tiver um Enum, ou crie um também
+    produto: ProdutoEnum  # Agora usa o Enum
     quantidade_total: float
-    preco_saca_inicial: Optional[float] = None
+    unidade_medida: UnidadeMedidaEnum
+    tipo_frete_sugerido: TipoFreteEnum
+    preco_unidade_inicial: Optional[float] = None
     data_limite_envio: date
-    cidade_origem: str
-    estado_origem: Optional[str] = None  # fallback: usuario.estado
+    cidade_origem: Optional[str] = None
+    estado_origem: Optional[str] = None
+    cidade_destino: Optional[str] = None
+    estado_destino: Optional[str] = None
 
 
 class OfertaResposta(BaseModel):
@@ -21,15 +25,18 @@ class OfertaResposta(BaseModel):
     tipo_demanda: str
     produto: str
     quantidade_total: float
-    preco_saca_inicial: Optional[float]
+    unidade_medida: str           # Adicionado
+    tipo_frete_sugerido: str      # Adicionado
+    preco_unidade_inicial: Optional[float] = None  # Renomeado para bater com o banco
     data_limite_envio: date
-    cidade_origem: str
+    cidade_origem: Optional[str]
     estado_origem: Optional[str]
+    cidade_destino: Optional[str] # Adicionado
+    estado_destino: Optional[str] # Adicionado
     ia_preco_minimo: Optional[float]
     ia_preco_maximo: Optional[float]
     status: str
     criado_em: datetime
-
 
 class LanceCriar(BaseModel):
     valor_lance_saca: float

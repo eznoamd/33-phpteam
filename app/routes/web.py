@@ -186,20 +186,45 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         minhas_ofertas = db.query(OfertaMercado).filter(
             OfertaMercado.autor_id == usuario.id
         ).order_by(OfertaMercado.id.desc()).limit(10).all()
+        
         meus_contratos = db.query(ContratoTransporte).filter(
             ContratoTransporte.vendedor_id == usuario.id
         ).order_by(ContratoTransporte.id.desc()).limit(5).all()
+        
         ofertas_disponiveis = db.query(OfertaMercado).filter(
             OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
             OfertaMercado.autor_id != usuario.id,
             OfertaMercado.tipo_demanda == "QUERO_COMPRAR",
         ).order_by(OfertaMercado.id.desc()).limit(5).all()
+        
         ctx = {
             "minhas_ofertas": minhas_ofertas,
             "meus_contratos": meus_contratos,
             "ofertas_disponiveis": ofertas_disponiveis,
         }
 
+    elif usuario.perfil == "comprador":
+        minhas_ofertas = db.query(OfertaMercado).filter(
+            OfertaMercado.autor_id == usuario.id
+        ).order_by(OfertaMercado.id.desc()).limit(10).all()
+        
+        meus_contratos = db.query(ContratoTransporte).filter(
+            ContratoTransporte.comprador_id == usuario.id
+        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
+        
+        ofertas_disponiveis = db.query(OfertaMercado).filter(
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
+            OfertaMercado.autor_id != usuario.id,
+            OfertaMercado.tipo_demanda == "QUERO_VENDER",
+        ).order_by(OfertaMercado.id.desc()).limit(5).all()
+        
+        ctx = {
+            "minhas_ofertas": minhas_ofertas,
+            "meus_contratos": meus_contratos,
+            "ofertas_disponiveis": ofertas_disponiveis,
+        }
+
+    # Mantendo o transportador mapeado para evitar quebras no render
     elif usuario.perfil == "transportador":
         fretes_disponiveis = db.query(ContratoTransporte).filter(
             ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR"
@@ -208,24 +233,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             ContratoTransporte.transportador_id == usuario.id
         ).order_by(ContratoTransporte.id.desc()).limit(10).all()
         ctx = {"fretes_disponiveis": fretes_disponiveis, "meus_fretes": meus_fretes}
-
-    elif usuario.perfil == "comprador":
-        minhas_ofertas = db.query(OfertaMercado).filter(
-            OfertaMercado.autor_id == usuario.id
-        ).order_by(OfertaMercado.id.desc()).limit(10).all()
-        meus_contratos = db.query(ContratoTransporte).filter(
-            ContratoTransporte.comprador_id == usuario.id
-        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
-        ofertas_disponiveis = db.query(OfertaMercado).filter(
-            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
-            OfertaMercado.autor_id != usuario.id,
-            OfertaMercado.tipo_demanda == "QUERO_VENDER",
-        ).order_by(OfertaMercado.id.desc()).limit(5).all()
-        ctx = {
-            "minhas_ofertas": minhas_ofertas,
-            "meus_contratos": meus_contratos,
-            "ofertas_disponiveis": ofertas_disponiveis,
-        }
 
     return render("dashboard.html", request, db, **ctx)
 
