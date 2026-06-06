@@ -48,7 +48,7 @@
   --radius-pill:  100px;
 
   /* Tipografia */
-  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-display: 'Trebuchet MS', 'Arial', sans-serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
 
   /* Sombras */
@@ -122,8 +122,7 @@ body::after {
 .nav-brand-text {
   font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 400;
-  font-style: italic;
+  font-weight: bold;
   color: var(--white);
   letter-spacing: -0.01em;
 }
