@@ -64,6 +64,8 @@ def redirect_flash(url: str, tipo: str, texto: str) -> RedirectResponse:
 
 @router.get("/", response_class=HTMLResponse)
 def landing(request: Request, db: Session = Depends(get_db)):
+    if get_session_usuario(request, db):
+        return RedirectResponse("/dashboard", status_code=302)
     return render("landing.html", request, db)
 
 
