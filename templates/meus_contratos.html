@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Meus Contratos{% endblock %}
+
+{% block layout %}
+<div class="layout-sidebar">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard"        class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/mercado"          class="sidebar-link"><span class="icon">🌾</span> Mercado</a>
+      <a href="/meus-contratos"   class="sidebar-link active"><span class="icon">📄</span> Contratos</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/perfil"      class="sidebar-link"><span class="icon">👤</span> Perfil</a>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% for msg in flash_messages %}
+      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    {% endfor %}
+
+    <div class="page-header">
+      <h1>📄 Meus Contratos</h1>
+      <p>Operações fechadas e logística em andamento.</p>
+    </div>
+
+    <!-- Fretes disponíveis (só para transportador) -->
+    {% if session_usuario.perfil == 'transportador' and fretes_disponiveis %}
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-label">Fretes disponíveis para aceitar</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Modalidade</th>
+              <th>Valor/saca</th>
+              <th>Responsável frete</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in fretes_disponiveis %}
+          {% set oferta = oferta_map.get(c.oferta_id) %}
+          <tr>
+            <td><strong>{{ oferta.produto if oferta else '—' }}</strong></td>
+            <td style="color:var(--text-soft);">{{ c.modalidade_venda.replace('_', ' ') }}</td>
+            <td style="color:var(--verde-light); font-weight:700;">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+            <td>
+              <span class="badge {% if c.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
+                {{ c.responsavel_frete }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-yellow">aguardando transportador</span>
+            </td>
+            <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver e aceitar</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Meus contratos -->
+    {% if contratos %}
+    <div class="card">
+      <div class="card-label">
+        {% if session_usuario.perfil == 'transportador' %}Fretes aceitos
+        {% elif session_usuario.perfil == 'produtor' %}Vendas fechadas
+        {% else %}Compras fechadas{% endif %}
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Produto</th>
+              <th>Modalidade</th>
+              <th>Valor/saca</th>
+              <th>Resp. frete</th>
+              <th>Logística</th>
+              <th>Fechado em</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in contratos %}
+          {% set oferta = oferta_map.get(c.oferta_id) %}
+          <tr>
+            <td style="color:var(--text-muted);">#{{ c.id }}</td>
+            <td><strong>{{ oferta.produto if oferta else '—' }}</strong>
+              {% if oferta %}<span style="font-size:0.75rem; color:var(--text-muted);"> · {{ oferta.quantidade_total|int }} sacas</span>{% endif %}
+            </td>
+            <td style="color:var(--text-soft);">{{ c.modalidade_venda.replace('_', ' ') }}</td>
+            <td style="color:var(--verde-light); font-weight:700;">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+            <td>
+              <span class="badge {% if c.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
+                {{ c.responsavel_frete }}
+              </span>
+            </td>
+            <td>
+              <span class="badge
+                {% if c.status_logistica == 'ENTREGUE' %}badge-green
+                {% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue
+                {% else %}badge-yellow{% endif %}">
+                {{ c.status_logistica.lower().replace('_', ' ') }}
+              </span>
+            </td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">{{ c.criado_em.strftime('%d/%m/%Y') }}</td>
+            <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="card empty-state">
+      <div class="empty-state-icon">📄</div>
+      <h3>Nenhum contrato ainda</h3>
+      <p>
+        {% if session_usuario.perfil == 'transportador' %}Aceite um frete disponível acima.
+        {% else %}Conclua uma negociação no mercado para gerar seu primeiro contrato.{% endif %}
+      </p>
+      <a href="/mercado" class="btn btn-primary" style="margin-top:1rem;">Ir ao Mercado</a>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+{% endblock %}

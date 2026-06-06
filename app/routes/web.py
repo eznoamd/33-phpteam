@@ -298,6 +298,62 @@ def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_
     )
 
 
+@router.get("/meus-contratos", response_class=HTMLResponse)
+def meus_contratos_page(request: Request, db: Session = Depends(get_db)):
+    usuario = get_session_usuario(request, db)
+    if not usuario:
+        return redirect_flash("/login", "info", "Faça login para acessar.")
+
+    if usuario.perfil == "transportador":
+        disponiveis = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR")
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        meus = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.transportador_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        contratos = meus
+        fretes_disponiveis = disponiveis
+    elif usuario.perfil == "produtor":
+        contratos = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.vendedor_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        fretes_disponiveis = []
+    else:
+        contratos = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.comprador_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        fretes_disponiveis = []
+
+    # Carrega oferta para cada contrato (para mostrar produto)
+    oferta_map = {}
+    for c in contratos + fretes_disponiveis:
+        if c.oferta_id not in oferta_map:
+            oferta_map[c.oferta_id] = db.query(OfertaMercado).filter(
+                OfertaMercado.id == c.oferta_id
+            ).first()
+
+    return render(
+        "meus_contratos.html",
+        request,
+        db,
+        contratos=contratos,
+        fretes_disponiveis=fretes_disponiveis,
+        oferta_map=oferta_map,
+    )
+
+
 @router.get("/contratos/{contrato_id}", response_class=HTMLResponse)
 def contrato_page(contrato_id: int, request: Request, db: Session = Depends(get_db)):
     usuario = get_session_usuario(request, db)
