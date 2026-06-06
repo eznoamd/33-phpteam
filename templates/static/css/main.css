@@ -180,11 +180,18 @@ body::after {
 .sidebar {
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 1.5rem 0.75rem;
+  padding: 1.5rem 1rem;
   position: sticky;
   top: 68px;
   height: calc(100vh - 68px);
   overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-inner {
+  width: 100%;
+  max-width: 220px;
 }
 
 .sidebar-section { margin-bottom: 1.5rem; }
@@ -215,7 +222,15 @@ body::after {
 
 .sidebar-link:hover { color: var(--text); background: var(--surface-2); }
 .sidebar-link.active { color: var(--verde-light); background: var(--verde-glow); }
-.sidebar-link .icon { display: flex; align-items: center; width: 20px; flex-shrink: 0; }
+.sidebar-link .icon {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+.sidebar-link-danger { color: var(--danger); }
 
 .main { padding: 2rem 2.5rem; }
 
