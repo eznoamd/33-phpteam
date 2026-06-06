@@ -65,15 +65,19 @@ def redirect_flash(url: str, tipo: str, texto: str) -> RedirectResponse:
 
 @router.get("/", response_class=HTMLResponse)
 def landing(request: Request, db: Session = Depends(get_db)):
+    if get_session_usuario(request, db):
+        return RedirectResponse("/dashboard", status_code=302)
     return render("landing.html", request, db)
 
 
 @router.get("/catalogo", response_class=HTMLResponse)
-def catalogo(request: Request, db: Session = Depends(get_db)):
-    produtores = db.query(Usuario).filter(
-        Usuario.perfil == "produtor", Usuario.ativo == True
+def catalogo(request: Request, tipo: str = "produtor", db: Session = Depends(get_db)):
+    if tipo not in {"produtor", "comprador", "transportador"}:
+        tipo = "produtor"
+    usuarios = db.query(Usuario).filter(
+        Usuario.perfil == tipo, Usuario.ativo == True
     ).order_by(Usuario.avaliacao_media.desc()).all()
-    return render("catalogo.html", request, db, produtores=produtores)
+    return render("catalogo.html", request, db, usuarios=usuarios, tipo=tipo)
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -295,6 +299,62 @@ def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_
         autor=autor,
         since_id=since_id,
         contrato=contrato,
+    )
+
+
+@router.get("/meus-contratos", response_class=HTMLResponse)
+def meus_contratos_page(request: Request, db: Session = Depends(get_db)):
+    usuario = get_session_usuario(request, db)
+    if not usuario:
+        return redirect_flash("/login", "info", "Faça login para acessar.")
+
+    if usuario.perfil == "transportador":
+        disponiveis = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR")
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        meus = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.transportador_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        contratos = meus
+        fretes_disponiveis = disponiveis
+    elif usuario.perfil == "produtor":
+        contratos = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.vendedor_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        fretes_disponiveis = []
+    else:
+        contratos = (
+            db.query(ContratoTransporte)
+            .filter(ContratoTransporte.comprador_id == usuario.id)
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        fretes_disponiveis = []
+
+    # Carrega oferta para cada contrato (para mostrar produto)
+    oferta_map = {}
+    for c in contratos + fretes_disponiveis:
+        if c.oferta_id not in oferta_map:
+            oferta_map[c.oferta_id] = db.query(OfertaMercado).filter(
+                OfertaMercado.id == c.oferta_id
+            ).first()
+
+    return render(
+        "meus_contratos.html",
+        request,
+        db,
+        contratos=contratos,
+        fretes_disponiveis=fretes_disponiveis,
+        oferta_map=oferta_map,
     )
 
 

@@ -1,5 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Produtores{% endblock %}
+{% block title %}
+  {% if tipo == 'comprador' %}Compradores
+  {% elif tipo == 'transportador' %}Transportadores
+  {% else %}Produtores{% endif %}
+{% endblock %}
 
 {% block styles %}
 <style>
@@ -23,13 +27,17 @@
 {% endblock %}
 
 {% block content %}
+
+{% set label_map = {'produtor': ('Produtores', '🌾', 'produtores rurais'), 'comprador': ('Compradores', '📦', 'compradores de safra'), 'transportador': ('Transportadores', '🚛', 'transportadores logísticos')} %}
+{% set lbl = label_map.get(tipo, ('Usuários', '👤', 'usuários')) %}
+
 <div class="catalogo-header">
-  <h1>Produtores Cadastrados</h1>
-  <p>Encontre produtores rurais verificados na plataforma AgroHub.</p>
+  <h1>{{ lbl[1] }} {{ lbl[0] }} Cadastrados</h1>
+  <p>Encontre {{ lbl[2] }} verificados na plataforma AgroHub.</p>
 </div>
 
 <div class="filtros">
-  <input type="search" placeholder="Buscar produtor..." style="flex:1; max-width:320px;" />
+  <input type="search" placeholder="Buscar..." style="flex:1; max-width:320px;" />
   <select style="max-width:180px;">
     <option value="">Todos os estados</option>
     <option>RS</option><option>SC</option><option>PR</option>
@@ -37,13 +45,13 @@
     <option>MT</option><option>MS</option><option>BA</option>
   </select>
   {% if not session_usuario %}
-  <a href="/cadastro" class="btn btn-primary btn-sm">Cadastre-se para comprar</a>
+  <a href="/cadastro" class="btn btn-primary btn-sm">Cadastre-se →</a>
   {% endif %}
 </div>
 
-{% if produtores %}
+{% if usuarios %}
 <div class="prod-grid">
-  {% for p in produtores %}
+  {% for p in usuarios %}
   <div class="prod-card">
     <div class="prod-header">
       <div class="avatar avatar-lg">{{ p.nome[0].upper() }}</div>
@@ -69,8 +77,8 @@
         <span class="num">{{ "%.1f"|format(p.avaliacao_media) }}</span>
         <span class="count">({{ p.total_avaliacoes }} aval.)</span>
       </div>
-      {% if session_usuario and session_usuario.perfil == 'comprador' %}
-      <a href="/demandas" class="btn btn-primary btn-sm">Comprar</a>
+      {% if tipo == 'transportador' and p.tipo_veiculo %}
+      <span class="badge badge-gray" style="font-size:0.72rem;">🚛 {{ p.tipo_veiculo }}</span>
       {% elif not session_usuario %}
       <a href="/cadastro" class="btn btn-secondary btn-sm">Conectar</a>
       {% endif %}
@@ -80,12 +88,10 @@
 </div>
 {% else %}
 <div class="card empty-state">
-  <div class="empty-state-icon">
-    <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-  </div>
-  <h3>Nenhum produtor cadastrado ainda</h3>
-  <p>Seja o primeiro produtor da plataforma!</p>
-  <a href="/cadastro" class="btn btn-primary mt-2" style="margin-top:1rem;">Cadastrar como produtor</a>
+  <div class="empty-state-icon">{{ lbl[1] }}</div>
+  <h3>Nenhum {{ tipo }} cadastrado ainda</h3>
+  <p>Seja o primeiro da plataforma!</p>
+  <a href="/cadastro" class="btn btn-primary mt-2" style="margin-top:1rem;">Cadastrar</a>
 </div>
 {% endif %}
 {% endblock %}

@@ -84,7 +84,8 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Principal</div>
       <a href="/dashboard"  class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
-      <a href="/mercado"    class="sidebar-link active"><span class="icon">🌾</span> Mercado</a>
+      <a href="/mercado"          class="sidebar-link active"><span class="icon">🌾</span> Mercado</a>
+      <a href="/meus-contratos"   class="sidebar-link"><span class="icon">📄</span> Contratos</a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Conta</div>
@@ -252,8 +253,11 @@ const MY_ID = {{ session_usuario.id }};
 const SINCE_ID = {{ since_id }};
 const OFERTA_STATUS = "{{ oferta.status }}";
 
-function getCookie(name) {
-  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
+function formatarErro(detail) {
+  if (!detail) return 'Erro.';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(e => e.msg || JSON.stringify(e)).join(' · ');
+  return JSON.stringify(detail);
 }
 
 function badgeClass(status) {
@@ -273,10 +277,12 @@ function scrollChat() {
 scrollChat();
 
 // ── SSE ──────────────────────────────────────────────────────────────────────
-if (OFERTA_STATUS !== 'FECHADA') {
-  const es = new EventSource(`/ofertas/${OFERTA_ID}/eventos?since_id=${SINCE_ID}`);
+let sseConn = null;
 
-  es.addEventListener('novo_lance', e => {
+if (OFERTA_STATUS !== 'FECHADA') {
+  sseConn = new EventSource(`/ofertas/${OFERTA_ID}/eventos?since_id=${SINCE_ID}`);
+
+  sseConn.addEventListener('novo_lance', e => {
     const lance = JSON.parse(e.data);
     if (!document.getElementById('lance-' + lance.id)) {
       appendBubble(lance);
@@ -284,7 +290,7 @@ if (OFERTA_STATUS !== 'FECHADA') {
     updateActionAreaFromLance(lance);
   });
 
-  es.addEventListener('lance_atualizado', e => {
+  sseConn.addEventListener('lance_atualizado', e => {
     const lance = JSON.parse(e.data);
     const el = document.getElementById('lance-' + lance.id);
     if (el) {
@@ -297,9 +303,10 @@ if (OFERTA_STATUS !== 'FECHADA') {
     updateActionAreaFromLance(lance);
   });
 
-  es.addEventListener('contrato_criado', e => {
+  sseConn.addEventListener('contrato_criado', e => {
     const c = JSON.parse(e.data);
     handleContratoCreado(c);
+    sseConn.close();
   });
 }
 
@@ -382,7 +389,14 @@ function mostrarForm() {
   }
 }
 
+let _contratoExibido = false;
+
 function handleContratoCreado(c) {
+  if (_contratoExibido) return;
+  _contratoExibido = true;
+
+  if (sseConn) { sseConn.close(); sseConn = null; }
+
   const actionArea = document.getElementById('action-area');
   const f = document.getElementById('form-lance');
   const b = document.getElementById('botoes-resposta');
@@ -401,7 +415,6 @@ function handleContratoCreado(c) {
 
 // ── Enviar lance ─────────────────────────────────────────────────────────────
 async function enviarLance() {
-  const token = getCookie('agrohub_session');
   const valor = parseFloat(document.getElementById('valor_lance').value);
   const modalidade = document.getElementById('modalidade_venda').value;
   const div = document.getElementById('msg-lance');
@@ -415,7 +428,8 @@ async function enviarLance() {
 
   const res = await fetch(`/ofertas/${OFERTA_ID}/lances`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify({valor_lance_saca: valor, modalidade_venda: modalidade}),
   });
 
@@ -423,22 +437,21 @@ async function enviarLance() {
     document.getElementById('valor_lance').value = '';
     document.getElementById('modalidade_venda').value = '';
     div.style.display = 'none';
-    // O SSE trará o novo bubble automaticamente
     document.getElementById('form-lance').style.display = 'none';
   } else {
     const d = await res.json();
     div.style.display = 'block';
     div.className = 'flash error';
-    div.textContent = '❌ ' + (d.detail || 'Erro ao enviar lance.');
+    div.textContent = '❌ ' + formatarErro(d.detail);
   }
 }
 
 // ── Aceitar / Recusar ─────────────────────────────────────────────────────────
 async function responderLance(lanceId, acao) {
-  const token = getCookie('agrohub_session');
   const res = await fetch(`/ofertas/${OFERTA_ID}/lances/${lanceId}/responder`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify({acao}),
   });
 

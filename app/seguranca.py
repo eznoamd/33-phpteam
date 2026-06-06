@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -18,7 +18,9 @@ def verificar_senha(senha: str, hash: str) -> bool:
     return bcrypt.checkpw(senha.encode("utf-8"), hash.encode("utf-8"))
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+COOKIE_NAME = "agrohub_session"
 
 
 def criar_token(dados: dict) -> str:
@@ -29,7 +31,8 @@ def criar_token(dados: dict) -> str:
 
 
 def obter_usuario_atual(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
     from app.models.usuario import Usuario
@@ -39,8 +42,24 @@ def obter_usuario_atual(
         detail="Token inválido ou expirado.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # Tenta Bearer header; se ausente ou inválido, cai no cookie de sessão
+    resolved = None
+    if token:
+        try:
+            jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+            resolved = token
+        except JWTError:
+            pass  # Bearer inválido (ex: "undefined") → tenta cookie
+
+    if resolved is None:
+        resolved = request.cookies.get(COOKIE_NAME)
+
+    if not resolved:
+        raise erro
+
     try:
-        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        payload = jwt.decode(resolved, config.SECRET_KEY, algorithms=[config.ALGORITHM])
         usuario_id: str = payload.get("sub")
         if usuario_id is None:
             raise erro
