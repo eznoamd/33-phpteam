@@ -35,9 +35,9 @@
   .hero-title {
     font-family: var(--font-display);
     font-size: clamp(2.5rem, 7vw, 4.5rem);
-    font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.03em;
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
     color: var(--white);
     margin-bottom: 1.25rem;
   }
@@ -56,13 +56,11 @@
     flex-wrap: wrap;
     margin-bottom: 4rem;
   }
-  .flow-section {
-    margin: 5rem 0;
-  }
+  .flow-section { margin: 5rem 0; }
   .flow-title {
     font-family: var(--font-display);
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.15em;
@@ -82,12 +80,13 @@
     padding: 0 0.5rem;
   }
   .flow-step:not(:last-child)::after {
-    content: '→';
+    content: '';
     position: absolute;
     right: -10px;
-    top: 14px;
-    color: var(--border-light);
-    font-size: 1rem;
+    top: 21px;
+    width: 20px;
+    height: 1px;
+    background: var(--border-light);
   }
   .flow-icon {
     width: 44px;
@@ -96,16 +95,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
     margin: 0 auto 0.75rem;
     border: 1px solid var(--border);
+    color: var(--text-soft);
   }
-  .flow-icon.verde { background: rgba(74,124,35,0.12); border-color: rgba(74,124,35,0.25); }
-  .flow-icon.terra { background: rgba(107,66,38,0.12); border-color: rgba(107,66,38,0.25); }
+  .flow-icon.verde { background: rgba(74,124,35,0.12); border-color: rgba(74,124,35,0.25); color: var(--verde-light); }
+  .flow-icon.terra { background: rgba(107,66,38,0.12); border-color: rgba(107,66,38,0.25); color: var(--terra-light); }
   .flow-step h4 {
     font-family: var(--font-display);
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--text-soft);
     margin-bottom: 0.25rem;
   }
@@ -126,11 +125,22 @@
     transition: border-color 0.2s, transform 0.2s;
   }
   .role-card:hover { border-color: var(--verde-mid); transform: translateY(-3px); }
-  .role-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .role-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    border: 1px solid var(--border);
+    color: var(--verde-light);
+    background: var(--verde-glow);
+  }
   .role-card h3 {
     font-family: var(--font-display);
     font-size: 1.1rem;
-    font-weight: 700;
+    font-weight: 400;
     color: var(--white);
     margin-bottom: 0.5rem;
   }
@@ -141,10 +151,10 @@
     color: var(--text-soft);
     padding: 0.25rem 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
   }
-  .role-features li::before { content: '✓'; color: var(--verde-light); font-weight: 700; font-size: 0.7rem; }
+  .role-features li svg { flex-shrink: 0; margin-top: 2px; color: var(--verde-light); }
 
   .cta-section {
     background: linear-gradient(135deg, rgba(45,80,22,0.2), rgba(74,124,35,0.08));
@@ -157,10 +167,10 @@
   .cta-section h2 {
     font-family: var(--font-display);
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 400;
     color: var(--white);
     margin-bottom: 0.75rem;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
   .cta-section p { color: var(--text-muted); margin-bottom: 2rem; }
 
@@ -176,7 +186,10 @@
 
 <!-- Hero -->
 <div class="hero">
-  <div class="hero-eyebrow">🌾 Plataforma do Agronegócio Brasileiro</div>
+  <div class="hero-eyebrow">
+    <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+    Plataforma do Agronegócio Brasileiro
+  </div>
   <h1 class="hero-title">
     Do campo ao<br>destino, <em>conectado.</em>
   </h1>
@@ -184,7 +197,9 @@
     AgroHub conecta produtores rurais, transportadores e compradores em uma só plataforma — simples, rápido e transparente.
   </p>
   <div class="hero-cta">
-    <a href="/cadastro" class="btn btn-primary btn-lg">Começar agora →</a>
+    <a href="/cadastro" class="btn btn-primary btn-lg">Começar agora
+      <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
     <a href="/catalogo" class="btn btn-secondary btn-lg">Ver produtores</a>
   </div>
 </div>
@@ -194,27 +209,37 @@
   <p class="flow-title">Como funciona</p>
   <div class="flow-steps">
     <div class="flow-step">
-      <div class="flow-icon verde">🛒</div>
+      <div class="flow-icon verde">
+        <svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+      </div>
       <h4>Demanda</h4>
       <p>Comprador publica o que precisa</p>
     </div>
     <div class="flow-step">
-      <div class="flow-icon verde">🌾</div>
+      <div class="flow-icon verde">
+        <svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="m17 7-5-5-5 5"/><path d="M5 22h14"/></svg>
+      </div>
       <h4>Produtor aceita</h4>
       <p>Produtor vê e aceita a demanda</p>
     </div>
     <div class="flow-step">
-      <div class="flow-icon terra">🚛</div>
+      <div class="flow-icon terra">
+        <svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
       <h4>Transportador</h4>
       <p>Transportador aceita a viagem</p>
     </div>
     <div class="flow-step">
-      <div class="flow-icon terra">📦</div>
-      <h4>Coleta & Entrega</h4>
+      <div class="flow-icon terra">
+        <svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </div>
+      <h4>Coleta &amp; Entrega</h4>
       <p>Carga coletada e entregue</p>
     </div>
     <div class="flow-step">
-      <div class="flow-icon verde">⭐</div>
+      <div class="flow-icon verde">
+        <svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
       <h4>Avaliações</h4>
       <p>Todos avaliam a experiência</p>
     </div>
@@ -224,36 +249,42 @@
 <!-- Perfis -->
 <div class="roles-grid">
   <div class="role-card">
-    <div class="role-icon">🌾</div>
+    <div class="role-icon">
+      <svg class="icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
     <h3>Produtor Rural</h3>
     <p>Gerencie suas demandas, conecte-se com transportadores confiáveis e venda seus produtos.</p>
     <ul class="role-features">
-      <li>Veja demandas abertas de compradores</li>
-      <li>Aceite e gerencie suas viagens</li>
-      <li>Sistema de avaliação e reputação</li>
-      <li>Chat direto com comprador e transportador</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Veja demandas abertas de compradores</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Aceite e gerencie suas viagens</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Sistema de avaliação e reputação</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Chat direto com comprador e transportador</li>
     </ul>
   </div>
   <div class="role-card">
-    <div class="role-icon">🚛</div>
+    <div class="role-icon">
+      <svg class="icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
     <h3>Transportador</h3>
     <p>Encontre cargas disponíveis, aceite viagens e construa sua reputação na plataforma.</p>
     <ul class="role-features">
-      <li>Veja viagens disponíveis por região</li>
-      <li>Informe seu veículo e capacidade</li>
-      <li>Acompanhe status em tempo real</li>
-      <li>Avalie produtores e compradores</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Veja viagens disponíveis por região</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Informe seu veículo e capacidade</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Acompanhe status em tempo real</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Avalie produtores e compradores</li>
     </ul>
   </div>
   <div class="role-card">
-    <div class="role-icon">🏢</div>
+    <div class="role-icon">
+      <svg class="icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+    </div>
     <h3>Comprador</h3>
     <p>Publique suas demandas, receba propostas de produtores e acompanhe suas entregas.</p>
     <ul class="role-features">
-      <li>Publique demandas com preço máximo</li>
-      <li>Receba propostas de produtores</li>
-      <li>Acompanhe o status da entrega</li>
-      <li>Avalie produtores e transportadores</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Publique demandas com preço máximo</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Receba propostas de produtores</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Acompanhe o status da entrega</li>
+      <li><svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Avalie produtores e transportadores</li>
     </ul>
   </div>
 </div>
