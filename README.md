@@ -1,6 +1,7 @@
 # 🏁 CodeRace AMF — Template Base Python
 
 ## 📁 Estrutura do projeto
+oi
 
 ```
 coderace/
