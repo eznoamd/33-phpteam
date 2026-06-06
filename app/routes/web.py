@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import config
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.models.demanda import Demanda
-from app.models.viagem import Viagem
-from app.models.negociacao import OfertaMercado, NegociacaoLance, ContratoTransporte, LanceFrete
+from app.models.negociacao import OfertaMercado, ContratoTransporte
 from app.seguranca import criar_token, hash_senha, verificar_senha
 
 router = APIRouter(tags=["Frontend"])
@@ -236,24 +234,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         ).order_by(ContratoTransporte.id.desc()).limit(10).all()
         ctx = {"fretes_disponiveis": fretes_disponiveis, "meus_fretes": meus_fretes}
 
-    elif usuario.perfil == "comprador":
-        minhas_ofertas = db.query(OfertaMercado).filter(
-            OfertaMercado.autor_id == usuario.id
-        ).order_by(OfertaMercado.id.desc()).limit(10).all()
-        meus_contratos = db.query(ContratoTransporte).filter(
-            ContratoTransporte.comprador_id == usuario.id
-        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
-        ofertas_disponiveis = db.query(OfertaMercado).filter(
-            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
-            OfertaMercado.autor_id != usuario.id,
-            OfertaMercado.tipo_demanda == "QUERO_VENDER",
-        ).order_by(OfertaMercado.id.desc()).limit(5).all()
-        ctx = {
-            "minhas_ofertas": minhas_ofertas,
-            "meus_contratos": meus_contratos,
-            "ofertas_disponiveis": ofertas_disponiveis,
-        }
-
     return render("dashboard.html", request, db, **ctx)
 
 
@@ -263,24 +243,6 @@ def perfil_page(request: Request, db: Session = Depends(get_db)):
     if not usuario:
         return redirect_flash("/login", "info", "Faça login para acessar.")
     return render("perfil.html", request, db)
-
-
-@router.get("/demandas", response_class=HTMLResponse)
-def demandas_page(request: Request, db: Session = Depends(get_db)):
-    usuario = get_session_usuario(request, db)
-    if not usuario:
-        return redirect_flash("/login", "info", "Faça login para acessar.")
-    demandas = db.query(Demanda).filter(Demanda.status == "aberta").order_by(Demanda.criado_em.desc()).all()
-    return render("demandas.html", request, db, demandas=demandas)
-
-
-@router.get("/viagens", response_class=HTMLResponse)
-def viagens_page(request: Request, db: Session = Depends(get_db)):
-    usuario = get_session_usuario(request, db)
-    if not usuario:
-        return redirect_flash("/login", "info", "Faça login para acessar.")
-    viagens = db.query(Viagem).filter(Viagem.status == "aguardando_transportador").order_by(Viagem.criado_em.desc()).all()
-    return render("viagens.html", request, db, viagens=viagens)
 
 
 # ── Marketplace ───────────────────────────────────────────────────────────────

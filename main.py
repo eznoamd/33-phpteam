@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.database import criar_tabelas, migrar_banco
-from app.routes import auth, usuarios, demandas, viagens, mensagens, catalogo, web, negociacao
+from app.routes import auth, usuarios, catalogo, web, negociacao
 
 app = FastAPI(
     title="AgroHub API",
@@ -24,9 +24,6 @@ app.include_router(web.router)
 # API
 app.include_router(auth.router)
 app.include_router(usuarios.router)
-app.include_router(demandas.router)
-app.include_router(viagens.router)
-app.include_router(mensagens.router)
 app.include_router(catalogo.router)
 app.include_router(negociacao.router)
 
