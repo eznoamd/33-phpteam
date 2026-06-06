@@ -89,7 +89,6 @@
       <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
     {% endfor %}
 
-    <!-- Cabeçalho da oferta -->
     <div class="page-header">
       <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
         <a href="/mercado" style="color:var(--text-muted); font-size:0.85rem;">← Mercado</a>
@@ -106,21 +105,19 @@
         {{ oferta.quantidade_total|int }} sacas ·
         {% if oferta.preco_saca_inicial %}Referência R$ {{ "%.2f"|format(oferta.preco_saca_inicial) }}/saca · {% endif %}
         Envio até {{ oferta.data_limite_envio.strftime('%d/%m/%Y') }} ·
-        📍 {{ oferta.cidade_origem }}{% if oferta.estado_origem %}/{{ oferta.estado_origem }}{% endif %}
+        <span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">location_on</span> {{ oferta.cidade_origem }}{% if oferta.estado_origem %}/{{ oferta.estado_origem }}{% endif %}
         · por <strong>{{ autor.nome.split()[0] }}</strong>
       </p>
     </div>
 
-    <!-- Guardrails IA -->
     {% if oferta.ia_preco_minimo and oferta.ia_preco_maximo %}
     <div class="guardrail-bar">
-      🤖 <strong>Guardrails da IA:</strong> lances aceitos entre
+      <span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: bottom; color: var(--verde-light);">smart_toy</span> <strong>Guardrails da IA:</strong> lances aceitos entre
       <strong>R$ {{ "%.2f"|format(oferta.ia_preco_minimo) }}</strong> e
       <strong>R$ {{ "%.2f"|format(oferta.ia_preco_maximo) }}</strong>/saca
     </div>
     {% endif %}
 
-    <!-- Chat de lances -->
     <div id="chat-container" class="chat-wrap">
       {% if lances %}
         {% for lance in lances %}
@@ -152,19 +149,17 @@
       {% endif %}
     </div>
 
-    <!-- Área de ação -->
     <div id="action-area">
 
       {% if oferta.status == 'FECHADA' %}
       <div class="flash success">
-        ✅ Negociação encerrada.
+        <span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Negociação encerrada.
         {% if contrato %}
         <a href="/contratos/{{ contrato.id }}" class="btn btn-primary btn-sm" style="margin-left:1rem;">Ver contrato</a>
         {% endif %}
       </div>
       {% else %}
 
-        <!-- Botões aceitar/recusar (só aparece se há lance PENDENTE da outra parte) -->
         {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}
         <div id="botoes-resposta" class="resposta-bar">
           <p style="margin-bottom:0.6rem; font-size:0.88rem; color:var(--text-soft);">
@@ -173,14 +168,13 @@
             — {{ ultimo_pendente.modalidade_venda.replace('_', ' ') }}
           </p>
           <div class="flex gap-2">
-            <button class="btn btn-primary btn-sm" onclick="responderLance({{ ultimo_pendente.id }}, 'ACEITAR')">✅ Aceitar</button>
-            <button class="btn" style="background:var(--danger); color:#fff;" onclick="responderLance({{ ultimo_pendente.id }}, 'RECUSAR')">❌ Recusar</button>
-            <button class="btn btn-ghost btn-sm" onclick="mostrarForm()">↩ Contraproposta</button>
+            <button class="btn btn-primary btn-sm" onclick="responderLance({{ ultimo_pendente.id }}, 'ACEITAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Aceitar</button>
+            <button class="btn" style="background:var(--danger); color:#fff;" onclick="responderLance({{ ultimo_pendente.id }}, 'RECUSAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">cancel</span> Recusar</button>
+            <button class="btn btn-ghost btn-sm" onclick="mostrarForm()"><span class="material-symbols-rounded" style="font-size: 1.2em;">reply</span> Contraproposta</button>
           </div>
         </div>
         {% endif %}
 
-        <!-- Formulário de novo lance -->
         <div id="form-lance" class="card"
           {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}style="display:none;"{% endif %}
           {% if oferta.autor_id == session_usuario.id and not lances %}style="display:none;"{% endif %}>
@@ -354,9 +348,9 @@ function updateActionAreaFromLance(lance) {
           Lance pendente: <strong style="color:var(--white)">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong> — ${lance.modalidade_venda.replace(/_/g, ' ')}
         </p>
         <div class="flex gap-2">
-          <button class="btn btn-primary btn-sm" onclick="responderLance(${lance.id}, 'ACEITAR')">✅ Aceitar</button>
-          <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance(${lance.id}, 'RECUSAR')">❌ Recusar</button>
-          <button class="btn btn-ghost btn-sm" onclick="mostrarForm()">↩ Contraproposta</button>
+          <button class="btn btn-primary btn-sm" onclick="responderLance(${lance.id}, 'ACEITAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Aceitar</button>
+          <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance(${lance.id}, 'RECUSAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">cancel</span> Recusar</button>
+          <button class="btn btn-ghost btn-sm" onclick="mostrarForm()"><span class="material-symbols-rounded" style="font-size: 1.2em;">reply</span> Contraproposta</button>
         </div>
       `;
       document.getElementById('action-area').prepend(div);
@@ -396,7 +390,7 @@ function handleContratoCreado(c) {
   const banner = document.createElement('div');
   banner.className = 'flash success';
   banner.innerHTML = `
-    ✅ Contrato fechado! Responsável pelo frete: <strong>${c.responsavel_frete}</strong>
+    <span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Contrato fechado! Responsável pelo frete: <strong>${c.responsavel_frete}</strong>
     — R$ ${c.valor_saca_final?.toFixed(2)}/saca —
     <a href="/contratos/${c.contrato_id}" class="btn btn-primary btn-sm" style="margin-left:0.75rem;">Ver contrato</a>
   `;
@@ -412,7 +406,7 @@ async function enviarLance() {
   if (!valor || !modalidade) {
     div.style.display = 'block';
     div.className = 'flash error';
-    div.textContent = '❌ Preencha o valor e a modalidade.';
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> Preencha o valor e a modalidade.';
     return;
   }
 
@@ -432,7 +426,7 @@ async function enviarLance() {
     const d = await res.json();
     div.style.display = 'block';
     div.className = 'flash error';
-    div.textContent = '❌ ' + formatarErro(d.detail);
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> ' + formatarErro(d.detail);
   }
 }
 
@@ -458,7 +452,7 @@ async function responderLance(lanceId, acao) {
     }
   } else {
     const d = await res.json();
-    alert('❌ ' + (d.detail || 'Erro.'));
+    alert('Erro: ' + (d.detail || 'Erro.'));
   }
 }
 </script>

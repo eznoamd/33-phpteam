@@ -28,11 +28,15 @@
 
 {% block content %}
 
-{% set label_map = {'produtor': ('Produtores', '🌾', 'produtores rurais'), 'comprador': ('Compradores', '📦', 'compradores de safra'), 'transportador': ('Transportadores', '🚛', 'transportadores logísticos')} %}
-{% set lbl = label_map.get(tipo, ('Usuários', '👤', 'usuários')) %}
+{% set label_map = {
+  'produtor': ('Produtores', '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: bottom;">agriculture</span>', 'produtores rurais'),
+  'comprador': ('Compradores', '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: bottom;">package</span>', 'compradores de safra'),
+  'transportador': ('Transportadores', '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: bottom;">local_shipping</span>', 'transportadores logísticos')
+} %}
+{% set lbl = label_map.get(tipo, ('Usuários', '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: bottom;">person</span>', 'usuários')) %}
 
 <div class="catalogo-header">
-  <h1>{{ lbl[1] }} {{ lbl[0] }} Cadastrados</h1>
+  <h1>{{ lbl[1] | safe }} {{ lbl[0] }} Cadastrados</h1>
   <p>Encontre {{ lbl[2] }} verificados na plataforma AgroHub.</p>
 </div>
 
@@ -78,7 +82,7 @@
         <span class="count">({{ p.total_avaliacoes }} aval.)</span>
       </div>
       {% if tipo == 'transportador' and p.tipo_veiculo %}
-      <span class="badge badge-gray" style="font-size:0.72rem;">🚛 {{ p.tipo_veiculo }}</span>
+      <span class="badge badge-gray" style="font-size:0.72rem;"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">local_shipping</span> {{ p.tipo_veiculo }}</span>
       {% elif not session_usuario %}
       <a href="/cadastro" class="btn btn-secondary btn-sm">Conectar</a>
       {% endif %}
@@ -88,7 +92,7 @@
 </div>
 {% else %}
 <div class="card empty-state">
-  <div class="empty-state-icon">{{ lbl[1] }}</div>
+  <div class="empty-state-icon">{{ lbl[1] | safe }}</div>
   <h3>Nenhum {{ tipo }} cadastrado ainda</h3>
   <p>Seja o primeiro da plataforma!</p>
   <a href="/cadastro" class="btn btn-primary mt-2" style="margin-top:1rem;">Cadastrar</a>

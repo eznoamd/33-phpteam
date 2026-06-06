@@ -26,7 +26,7 @@
 
     <div class="page-header flex items-center justify-between">
       <div>
-        <h1>🌾 Mercado</h1>
+        <h1 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">agriculture</span> Mercado</h1>
         <p>Compre e venda safra diretamente — preços blindados por IA.</p>
       </div>
       {% if session_usuario and session_usuario.perfil != 'transportador' %}
@@ -98,14 +98,15 @@
           </div>
         </div>
         <div style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);">
-          📍 {{ o.cidade_origem or o.cidade_destino }}/{{ o.estado_origem or o.estado_destino }} · Publicada em {{ o.criado_em.strftime('%d/%m/%Y') }}
+          <span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">location_on</span> {{ o.cidade_origem }}{% if o.estado_origem %}/{{ o.estado_origem }}{% endif %}
+          &nbsp;·&nbsp; Publicada em {{ o.criado_em.strftime('%d/%m/%Y') }}
         </div>
       </div>
       {% endfor %}
     </div>
     {% else %}
     <div class="card empty-state">
-      <div class="empty-state-icon">🌾</div>
+      <div class="empty-state-icon"><span class="material-symbols-rounded" style="font-size: 2rem;">agriculture</span></div>
       <h3>Nenhuma oferta no mercado</h3>
       <p>Seja o primeiro a publicar!</p>
     </div>
@@ -117,8 +118,10 @@
 <div id="modal-oferta" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
   <div class="card" style="max-width:520px; width:100%; margin:0; max-height:90vh; overflow-y:auto;">
     <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
-      <h2 style="font-family:var(--font-display); color:var(--white);">Publicar Oferta</h2>
-      <button class="btn btn-ghost btn-sm" onclick="fecharModal()">✕</button>
+      <h2 style="font-family:var(--font-display); color:var(--white);">
+        {% if session_usuario.perfil == 'produtor' %}<span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">agriculture</span> Publicar venda{% else %}<span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">package</span> Publicar demanda{% endif %}
+      </h2>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-oferta').style.display='none'">✕</button>
     </div>
     <form id="form-oferta">
       <div class="form-group">

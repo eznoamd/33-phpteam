@@ -14,7 +14,7 @@
 
     <div class="page-header flex items-center justify-between">
       <div>
-        <h1>📋 Demandas</h1>
+        <h1 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">assignment</span> Demandas</h1>
         <p>
           {% if session_usuario.perfil == 'comprador' %}Publique o que você precisa comprar.
           {% elif session_usuario.perfil == 'produtor' %}Aceite demandas de compradores.
@@ -54,7 +54,7 @@
           </div>
         </div>
         {% if d.local_entrega %}
-        <div style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);">📍 {{ d.local_entrega }}</div>
+        <div style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">location_on</span> {{ d.local_entrega }}</div>
         {% endif %}
         {% if d.descricao %}
         <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-soft);">{{ d.descricao }}</div>
@@ -67,7 +67,7 @@
     </div>
     {% else %}
     <div class="card empty-state">
-      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-icon"><span class="material-symbols-rounded" style="font-size: 2rem;">assignment</span></div>
       <h3>Nenhuma demanda aberta</h3>
       <p>
         {% if session_usuario.perfil == 'comprador' %}Publique sua primeira demanda!
@@ -82,12 +82,11 @@
   </main>
 </div>
 
-<!-- Modal nova demanda (comprador) -->
 {% if session_usuario.perfil == 'comprador' %}
 <div id="modal-demanda" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
   <div class="card" style="max-width:480px; width:100%; margin:0;">
     <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
-      <h2 style="font-family:var(--font-display); color:var(--white);">📋 Nova demanda</h2>
+      <h2 style="font-family:var(--font-display); color:var(--white);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">assignment</span> Nova demanda</h2>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-demanda').style.display='none'">✕</button>
     </div>
     <form id="form-demanda">
@@ -144,14 +143,14 @@ async function criarDemanda() {
   const res = await fetch('/demandas/', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify(body) });
   const div = document.getElementById('msg-demanda');
   div.style.display = 'block';
-  if (res.ok) { div.className='flash success'; div.textContent='✅ Demanda publicada! Atualizando...'; setTimeout(()=>location.reload(), 1200); }
-  else { const d = await res.json(); div.className='flash error'; div.textContent='❌ '+(d.detail||'Erro ao criar demanda.'); }
+  if (res.ok) { div.className='flash success'; div.innerHTML='<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Demanda publicada! Atualizando...'; setTimeout(()=>location.reload(), 1200); }
+  else { const d = await res.json(); div.className='flash error'; div.innerHTML='<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> '+(d.detail||'Erro ao criar demanda.'); }
 }
 async function aceitarDemanda(id) {
   const token = document.cookie.split(';').find(c => c.trim().startsWith('agrohub_session='))?.split('=')[1];
   const res = await fetch('/demandas/'+id+'/aceitar', { method:'POST', headers:{'Authorization':'Bearer '+token} });
-  if (res.ok) { alert('✅ Demanda aceita! Acesse o dashboard para criar a viagem.'); location.reload(); }
-  else { const d = await res.json(); alert('❌ '+(d.detail||'Erro.')); }
+  if (res.ok) { alert('Demanda aceita! Acesse o dashboard para criar a viagem.'); location.reload(); }
+  else { const d = await res.json(); alert('Erro: '+(d.detail||'Erro.')); }
 }
 </script>
-{% endblock %}
+{% endblock %}  
