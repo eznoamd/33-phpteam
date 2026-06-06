@@ -71,11 +71,13 @@ def landing(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/catalogo", response_class=HTMLResponse)
-def catalogo(request: Request, db: Session = Depends(get_db)):
-    produtores = db.query(Usuario).filter(
-        Usuario.perfil == "produtor", Usuario.ativo == True
+def catalogo(request: Request, tipo: str = "produtor", db: Session = Depends(get_db)):
+    if tipo not in {"produtor", "comprador", "transportador"}:
+        tipo = "produtor"
+    usuarios = db.query(Usuario).filter(
+        Usuario.perfil == tipo, Usuario.ativo == True
     ).order_by(Usuario.avaliacao_media.desc()).all()
-    return render("catalogo.html", request, db, produtores=produtores)
+    return render("catalogo.html", request, db, usuarios=usuarios, tipo=tipo)
 
 
 @router.get("/login", response_class=HTMLResponse)

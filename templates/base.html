@@ -19,7 +19,18 @@
   </a>
 
   <div class="nav-links">
-    <a href="/catalogo" class="nav-link {% if request.url.path == '/catalogo' %}active{% endif %}">Produtores</a>
+    {% if not session_usuario %}
+      <a href="/catalogo" class="nav-link {% if request.url.path == '/catalogo' %}active{% endif %}">Produtores</a>
+    {% elif session_usuario.perfil == 'produtor' %}
+      <a href="/catalogo?tipo=comprador"     class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'comprador' %}active{% endif %}">Compradores</a>
+      <a href="/catalogo?tipo=transportador" class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'transportador' %}active{% endif %}">Transportadores</a>
+    {% elif session_usuario.perfil == 'comprador' %}
+      <a href="/catalogo?tipo=produtor"      class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'produtor' %}active{% endif %}">Produtores</a>
+      <a href="/catalogo?tipo=transportador" class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'transportador' %}active{% endif %}">Transportadores</a>
+    {% elif session_usuario.perfil == 'transportador' %}
+      <a href="/catalogo?tipo=produtor"  class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'produtor' %}active{% endif %}">Produtores</a>
+      <a href="/catalogo?tipo=comprador" class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'comprador' %}active{% endif %}">Compradores</a>
+    {% endif %}
     <a href="/mercado"  class="nav-link {% if request.url.path == '/mercado' %}active{% endif %}">Mercado</a>
     {% if session_usuario %}
       <a href="/dashboard"      class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
