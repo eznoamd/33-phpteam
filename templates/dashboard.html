@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Minha Área{% endblock %}
 
+{% set estados_br = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'] %}
+
 {% block content %}
 <div class="main">
 
@@ -15,12 +17,14 @@
         <span style="color:var(--text-muted); font-size:0.8rem;">({{ session_usuario.total_avaliacoes }} aval.)</span>
       </p>
     </div>
-    {% if session_usuario.perfil != 'transportador' %}
-      <button class="btn btn-primary" onclick="document.getElementById('modal-oferta').style.display='flex'">
-        <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        {% if session_usuario.perfil == 'produtor' %}Publicar venda{% else %}Publicar demanda{% endif %}
-      </button>
-    {% endif %}
+    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+      {% if session_usuario.perfil != 'transportador' %}
+        <button class="btn btn-primary" onclick="document.getElementById('modal-oferta').style.display='flex'">
+          <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          {% if session_usuario.perfil == 'produtor' %}Publicar venda{% else %}Publicar demanda{% endif %}
+        </button>
+      {% endif %}
+    </div>
   </div>
 
   {# ── PRODUTOR / COMPRADOR ──────────────────────────────────────────────── #}
@@ -29,22 +33,32 @@
     {# Seção 1 — Minhas ofertas #}
     <div class="card" id="minhas-ofertas">
       <div class="flex items-center justify-between mb-2">
-        <div class="card-label" style="margin-bottom:0;">
-          {% if session_usuario.perfil == 'produtor' %}Minhas ofertas{% else %}Minhas demandas{% endif %}
-          {% if minhas_ofertas %}
-            <span class="badge badge-gray" style="margin-left:0.5rem;">{{ minhas_ofertas|length }}</span>
-          {% endif %}
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div class="card-label" style="margin-bottom:0;">
+            {% if session_usuario.perfil == 'produtor' %}Minhas ofertas{% else %}Minhas demandas{% endif %}
+            {% if minhas_ofertas %}
+              <span class="badge badge-gray" style="margin-left:0.5rem;">{{ minhas_ofertas|length }}</span>
+            {% endif %}
+          </div>
+          <label style="font-size:0.78rem; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:0.35rem; font-weight:400; margin-bottom:0;">
+            <input type="checkbox" id="ocultar-concluidas-ofertas" onchange="toggleConcluidas('ofertas')" style="cursor:pointer;" />
+            Ocultar concluídas
+          </label>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-oferta').style.display='flex'">+ Nova</button>
       </div>
       {% if minhas_ofertas %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Produto</th><th>Qtd</th><th>Status</th><th>Publicada em</th><th></th></tr></thead>
+          <thead><tr><th>Produto</th><th>Último interesse</th><th>Qtd</th><th>Status</th><th>Publicada em</th><th></th></tr></thead>
           <tbody>
           {% for o in minhas_ofertas %}
-          <tr>
+          <tr data-secao="ofertas" data-status="{{ o.status }}">
             <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">
+              {% set uid = ultimo_proponente_por_oferta.get(o.id) %}
+              {% if uid %}{{ usuarios_map.get(uid, '—') }}{% else %}<span style="color:var(--text-muted); opacity:0.5;">sem propostas</span>{% endif %}
+            </td>
             <td>{{ o.quantidade_total|int }} {{ o.unidade_medida.split('.')[-1] if o.unidade_medida else 'sacas' }}</td>
             <td>
               <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% elif o.status == 'AGUARDANDO_ACEITE' %}badge-blue{% else %}badge-gray{% endif %}">
@@ -82,12 +96,15 @@
       {% if lances_ativos %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Produto</th><th>Meu lance</th><th>Status da oferta</th><th>Enviado em</th><th></th></tr></thead>
+          <thead><tr><th>Produto</th><th>Contraparte</th><th>Meu lance</th><th>Status da oferta</th><th>Enviado em</th><th></th></tr></thead>
           <tbody>
           {% for l in lances_ativos %}
           {% set oferta = ofertas_lance_map.get(l.oferta_id) %}
           <tr>
             <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">
+              {% if oferta %}{{ usuarios_map.get(oferta.autor_id, '—') }}{% else %}—{% endif %}
+            </td>
             <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(l.valor_lance_saca) }}/saca</td>
             <td>
               {% if oferta %}
@@ -115,23 +132,63 @@
 
     {# Seção 3 — Oportunidades (ofertas sem lance meu ainda) #}
     <div class="card" id="oportunidades">
-      <div class="flex items-center justify-between mb-2">
-        <div class="card-label" style="margin-bottom:0;">
-          {% if session_usuario.perfil == 'produtor' %}Demandas de compradores{% else %}Ofertas de venda{% endif %}
-          <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">onde você ainda não deu lance</span>
-          {% if oportunidades %}
-            <span class="badge badge-gray" style="margin-left:0.5rem;">{{ oportunidades|length }}</span>
-          {% endif %}
+      <div style="margin-bottom:1rem;">
+        <div class="flex items-center justify-between" style="margin-bottom:0.75rem;">
+          <div class="card-label" style="margin-bottom:0;">
+            {% if session_usuario.perfil == 'produtor' %}Demandas de compradores{% else %}Ofertas de venda{% endif %}
+            <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">sem lance seu</span>
+            {% if oportunidades %}
+              <span class="badge badge-gray" style="margin-left:0.5rem;">{{ oportunidades|length }}</span>
+            {% endif %}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="pedirRecomendacao()">✨ Recomendação IA</button>
         </div>
+        <form method="get" action="/dashboard" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0; min-width:130px;">
+            <label style="font-size:0.72rem;">Produto</label>
+            <input type="text" name="produto" value="{{ filtro_produto }}" placeholder="Soja, Milho…" style="padding:0.4rem 0.65rem; font-size:0.82rem;" />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.72rem;">Estado (UF)</label>
+            <select name="estado" style="padding:0.4rem 0.65rem; font-size:0.82rem; width:80px;">
+              <option value="">Todos</option>
+              {% for uf in estados_br %}<option value="{{ uf }}" {% if filtro_estado == uf %}selected{% endif %}>{{ uf }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0; width:90px;">
+            <label style="font-size:0.72rem;">Qtd mín</label>
+            <input type="number" name="qtd_min" value="{{ filtro_qtd_min }}" placeholder="0" min="0" style="padding:0.4rem 0.65rem; font-size:0.82rem;" />
+          </div>
+          <div class="form-group" style="margin-bottom:0; width:90px;">
+            <label style="font-size:0.72rem;">Qtd máx</label>
+            <input type="number" name="qtd_max" value="{{ filtro_qtd_max }}" placeholder="∞" min="0" style="padding:0.4rem 0.65rem; font-size:0.82rem;" />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.72rem;">Prazo de</label>
+            <input type="date" name="data_de" value="{{ filtro_data_de }}" style="padding:0.4rem 0.65rem; font-size:0.82rem;" />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.72rem;">até</label>
+            <input type="date" name="data_ate" value="{{ filtro_data_ate }}" style="padding:0.4rem 0.65rem; font-size:0.82rem;" />
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm" style="margin-bottom:1px;">Filtrar</button>
+          {% if filtro_produto or filtro_qtd_min or filtro_qtd_max or filtro_data_de or filtro_data_ate or filtro_estado != (session_usuario.estado or '') %}
+            <a href="/dashboard" class="btn btn-ghost btn-sm" style="margin-bottom:1px;">Limpar</a>
+          {% endif %}
+          {% if filtro_estado and filtro_estado == (session_usuario.estado or '') %}
+            <span style="font-size:0.72rem; color:var(--text-muted); align-self:center;">filtro do seu perfil</span>
+          {% endif %}
+        </form>
       </div>
       {% if oportunidades %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Produto</th><th>Qtd</th><th>Tipo frete</th><th>Valor</th><th>Localização</th><th></th></tr></thead>
+          <thead><tr><th>Produto</th><th>Publicada por</th><th>Qtd</th><th>Tipo frete</th><th>Valor</th><th>Localização</th><th></th></tr></thead>
           <tbody>
           {% for o in oportunidades %}
           <tr>
             <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">{{ usuarios_map.get(o.autor_id, '—') }}</td>
             <td>{{ o.quantidade_total|int }}</td>
             <td style="color:var(--text-muted); font-size:0.82rem;">
               {{ o.tipo_frete_sugerido.replace('_', ' ') if o.tipo_frete_sugerido else '—' }}
@@ -170,24 +227,47 @@
 
     {# Seção 1 — Fretes disponíveis (sem lance meu) #}
     <div class="card" id="fretes-disponiveis">
-      <div class="flex items-center justify-between mb-2">
-        <div class="card-label" style="margin-bottom:0;">
-          Fretes disponíveis
-          <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">onde você ainda não deu lance</span>
-          {% if fretes_disponiveis %}
-            <span class="badge badge-yellow" style="margin-left:0.5rem;">{{ fretes_disponiveis|length }}</span>
-          {% endif %}
+      <div style="margin-bottom:1rem;">
+        <div class="flex items-center justify-between" style="margin-bottom:0.75rem;">
+          <div class="card-label" style="margin-bottom:0;">
+            Fretes disponíveis
+            <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">sem lance seu</span>
+            {% if fretes_disponiveis %}
+              <span class="badge badge-yellow" style="margin-left:0.5rem;">{{ fretes_disponiveis|length }}</span>
+            {% endif %}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="pedirRecomendacao()">✨ Recomendação IA</button>
         </div>
+        <form method="get" action="/dashboard" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:0.72rem;">Estado origem (UF)</label>
+            <select name="estado" style="padding:0.4rem 0.65rem; font-size:0.82rem; width:80px;">
+              <option value="">Todos</option>
+              {% for uf in estados_br %}<option value="{{ uf }}" {% if filtro_estado == uf %}selected{% endif %}>{{ uf }}</option>{% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm" style="margin-bottom:1px;">Filtrar</button>
+          {% if filtro_estado != (session_usuario.estado or '') %}
+            <a href="/dashboard" class="btn btn-ghost btn-sm" style="margin-bottom:1px;">Limpar</a>
+          {% endif %}
+          {% if filtro_estado and filtro_estado == (session_usuario.estado or '') %}
+            <span style="font-size:0.72rem; color:var(--text-muted); align-self:center;">filtro do seu perfil</span>
+          {% endif %}
+        </form>
       </div>
       {% if fretes_disponiveis %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Produto</th><th>Modalidade</th><th>Valor/saca</th><th>Resp. frete</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Produto</th><th>Partes</th><th>Modalidade</th><th>Valor/saca</th><th>Resp. frete</th><th>Status</th><th></th></tr></thead>
           <tbody>
           {% for c in fretes_disponiveis %}
           {% set oferta = oferta_map.get(c.oferta_id) %}
           <tr>
             <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td style="font-size:0.8rem; line-height:1.55;">
+              <div><span style="color:var(--text-muted);">V:</span> {{ usuarios_map.get(c.vendedor_id, '—') }}</div>
+              <div><span style="color:var(--text-muted);">C:</span> {{ usuarios_map.get(c.comprador_id, '—') }}</div>
+            </td>
             <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
             <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
             <td>
@@ -227,7 +307,7 @@
       {% if lances_frete_ativos %}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Contrato</th><th>Produto</th><th>Meu lance frete</th><th>Enviado em</th><th></th></tr></thead>
+          <thead><tr><th>Contrato</th><th>Produto</th><th>Partes</th><th>Meu lance frete</th><th>Enviado em</th><th></th></tr></thead>
           <tbody>
           {% for l in lances_frete_ativos %}
           {% set contrato = contrato_frete_map.get(l.contrato_id) %}
@@ -235,6 +315,12 @@
           <tr>
             <td>#{{ l.contrato_id }}</td>
             <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td style="font-size:0.8rem; line-height:1.55;">
+              {% if contrato %}
+              <div><span style="color:var(--text-muted);">V:</span> {{ usuarios_map.get(contrato.vendedor_id, '—') }}</div>
+              <div><span style="color:var(--text-muted);">C:</span> {{ usuarios_map.get(contrato.comprador_id, '—') }}</div>
+              {% else %}—{% endif %}
+            </td>
             <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(l.valor_frete_saca) }}/saca</td>
             <td style="color:var(--text-muted);">{{ l.criado_em.strftime('%d/%m/%Y') }}</td>
             <td><a href="/contratos/{{ l.contrato_id }}" class="btn btn-ghost btn-sm">Ver negociação</a></td>
@@ -258,11 +344,17 @@
   {# ── CONTRATOS (todos os perfis) ───────────────────────────────────────── #}
   <div class="card" id="contratos">
     <div class="flex items-center justify-between mb-2">
-      <div class="card-label" style="margin-bottom:0;">
-        Contratos
-        {% if meus_contratos %}
-          <span class="badge badge-gray" style="margin-left:0.5rem;">{{ meus_contratos|length }}</span>
-        {% endif %}
+      <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <div class="card-label" style="margin-bottom:0;">
+          Contratos
+          {% if meus_contratos %}
+            <span class="badge badge-gray" style="margin-left:0.5rem;">{{ meus_contratos|length }}</span>
+          {% endif %}
+        </div>
+        <label style="font-size:0.78rem; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:0.35rem; font-weight:400; margin-bottom:0;">
+          <input type="checkbox" id="ocultar-concluidas-contratos" onchange="toggleConcluidas('contratos')" style="cursor:pointer;" />
+          Ocultar entregues
+        </label>
       </div>
     </div>
     {% if meus_contratos %}
@@ -273,6 +365,7 @@
             <th>Contrato</th>
             <th>Produto</th>
             <th>Meu papel</th>
+            <th>Participantes</th>
             <th>Modalidade</th>
             <th>Valor/saca</th>
             <th>Logística</th>
@@ -282,7 +375,7 @@
         <tbody>
         {% for c in meus_contratos %}
         {% set oferta = oferta_map.get(c.oferta_id) %}
-        <tr>
+        <tr data-secao="contratos" data-logistica="{{ c.status_logistica }}">
           <td>#{{ c.id }}</td>
           <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
           <td>
@@ -292,6 +385,13 @@
               <span class="badge badge-blue">Comprador</span>
             {% elif c.transportador_id == session_usuario.id %}
               <span class="badge badge-gray">Transportador</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.8rem; line-height:1.55;">
+            <div><span style="color:var(--text-muted);">V:</span> {{ usuarios_map.get(c.vendedor_id, '—') }}</div>
+            <div><span style="color:var(--text-muted);">C:</span> {{ usuarios_map.get(c.comprador_id, '—') }}</div>
+            {% if c.transportador_id %}
+            <div><span style="color:var(--text-muted);">T:</span> {{ usuarios_map.get(c.transportador_id, '—') }}</div>
             {% endif %}
           </td>
           <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
@@ -397,11 +497,47 @@
   </div>
 </div>
 {% endif %}
+
+{# Modal de recomendação IA #}
+<div id="modal-ia" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="max-width:440px; width:100%; margin:0;">
+    <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
+      <h2 style="font-family:var(--font-display); color:var(--white); font-size:1.1rem;">✨ Recomendação IA</h2>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-ia').style.display='none'">✕</button>
+    </div>
+    <div id="ia-loading" style="text-align:center; padding:2rem 0;">
+      <div style="font-size:1.5rem; margin-bottom:0.75rem;">⏳</div>
+      <div style="color:var(--text-muted); font-size:0.88rem;">Analisando suas oportunidades…</div>
+    </div>
+    <div id="ia-resultado" style="display:none;">
+      <p id="ia-justificativa" style="color:var(--text-soft); font-size:0.92rem; line-height:1.55; margin-bottom:1.25rem;"></p>
+      <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-ia').style.display='none'">Fechar</button>
+        <a id="ia-link" href="#" class="btn btn-primary btn-sm">Ver oportunidade →</a>
+      </div>
+    </div>
+    <div id="ia-erro" style="display:none;" class="flash error"></div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 const PERFIL = "{{ session_usuario.perfil if session_usuario else '' }}";
+
+function toggleConcluidas(secao) {
+  if (secao === 'ofertas') {
+    const ativo = document.getElementById('ocultar-concluidas-ofertas').checked;
+    document.querySelectorAll('tr[data-secao="ofertas"]').forEach(tr => {
+      if (tr.dataset.status === 'FECHADA') tr.style.display = ativo ? 'none' : '';
+    });
+  } else {
+    const ativo = document.getElementById('ocultar-concluidas-contratos').checked;
+    document.querySelectorAll('tr[data-secao="contratos"]').forEach(tr => {
+      if (tr.dataset.logistica === 'ENTREGUE') tr.style.display = ativo ? 'none' : '';
+    });
+  }
+}
 
 function fecharModal() {
   document.getElementById('modal-oferta').style.display = 'none';
@@ -499,6 +635,38 @@ async function criarOferta() {
     location.reload();
   } else {
     mostrarErro("Erro ao publicar oferta. Verifique os dados preenchidos.");
+  }
+}
+
+async function pedirRecomendacao() {
+  const modal = document.getElementById('modal-ia');
+  modal.style.display = 'flex';
+  document.getElementById('ia-loading').style.display = 'block';
+  document.getElementById('ia-resultado').style.display = 'none';
+  document.getElementById('ia-erro').style.display = 'none';
+
+  try {
+    const res = await fetch('/ia/recomendacao', { method: 'POST', credentials: 'same-origin' });
+    const d = await res.json();
+    document.getElementById('ia-loading').style.display = 'none';
+    if (!res.ok || !d.justificativa) {
+      document.getElementById('ia-erro').style.display = 'block';
+      document.getElementById('ia-erro').textContent = '❌ ' + (d.detail || 'Erro ao obter recomendação.');
+      return;
+    }
+    document.getElementById('ia-justificativa').textContent = d.justificativa;
+    const link = document.getElementById('ia-link');
+    if (d.id) {
+      link.href = d.link;
+      link.style.display = 'inline-flex';
+    } else {
+      link.style.display = 'none';
+    }
+    document.getElementById('ia-resultado').style.display = 'block';
+  } catch (e) {
+    document.getElementById('ia-loading').style.display = 'none';
+    document.getElementById('ia-erro').style.display = 'block';
+    document.getElementById('ia-erro').textContent = '❌ Erro de conexão.';
   }
 }
 </script>

@@ -2,40 +2,54 @@
 {% block title %}Meu Perfil{% endblock %}
 
 {% block content %}
-
-  <div class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
-    <div class="page-header">
+<div class="main">
+  <div class="page-header flex items-center justify-between">
+    <div>
       <h1>Meu Perfil</h1>
       <p>Gerencie suas informações pessoais e dados da conta.</p>
     </div>
+  </div>
 
-    <div class="card" style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1.5rem;">
-      <div class="avatar avatar-lg" style="width:64px;height:64px;font-size:1.5rem;">{{ session_usuario.nome[0].upper() }}</div>
-      <div style="flex:1;">
-        <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:400; color:var(--white);">{{ session_usuario.nome }}</div>
-        <div style="color:var(--text-muted); font-size:0.85rem;">{{ session_usuario.email }}</div>
-        <div style="display:flex; gap:0.5rem; margin-top:0.4rem; align-items:center;">
-          <span class="badge badge-green">{{ session_usuario.perfil }}</span>
-          <span class="stars">★</span>
-          <span style="color:var(--white); font-weight:600;">{{ "%.1f"|format(session_usuario.avaliacao_media) }}</span>
-          <span style="color:var(--text-muted); font-size:0.78rem;">({{ session_usuario.total_avaliacoes }} avaliações)</span>
-        </div>
+  <div class="card" style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1.5rem;">
+    <div class="avatar avatar-lg" style="width:64px;height:64px;font-size:1.5rem;">{{ session_usuario.nome[0].upper() }}</div>
+    <div style="flex:1;">
+      <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:400; color:var(--white);" id="header-nome">{{ session_usuario.nome }}</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;">{{ session_usuario.email }}</div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.4rem; align-items:center;">
+        <span class="badge badge-green">{{ session_usuario.perfil }}</span>
+        <span class="stars">★</span>
+        <span style="color:var(--white); font-weight:600;">{{ "%.1f"|format(session_usuario.avaliacao_media) }}</span>
+        <span style="color:var(--text-muted); font-size:0.78rem;">({{ session_usuario.total_avaliacoes }} avaliações)</span>
       </div>
     </div>
+  </div>
 
-    <div class="card">
-      <div class="card-label">Dados da conta — {{ session_usuario.perfil | capitalize }}</div>
+  <div class="card">
+    <div class="card-label">Dados da conta — {{ session_usuario.perfil | capitalize }}</div>
+    <div id="msg-perfil" style="display:none; margin-bottom:1rem;"></div>
+    <form id="form-perfil">
       <div class="grid-2" style="gap:1.25rem;">
+
+        {# Campos comuns a todos os perfis #}
         <div class="form-group">
           <label>Nome completo</label>
-          <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.nome }}</div>
+          <input type="text" id="p_nome" name="nome" value="{{ session_usuario.nome }}" required />
         </div>
         <div class="form-group">
           <label>E-mail</label>
           <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.email }}</div>
+        </div>
+        <div class="form-group">
+          <label>Telefone</label>
+          <input type="text" id="p_telefone" name="telefone" value="{{ session_usuario.telefone or '' }}" placeholder="(11) 9 9999-9999" />
+        </div>
+        <div class="form-group">
+          <label>Estado (UF)</label>
+          <input type="text" id="p_estado" name="estado" value="{{ session_usuario.estado or '' }}" placeholder="SP" maxlength="2" style="text-transform:uppercase;" />
+        </div>
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="p_cidade" name="cidade" value="{{ session_usuario.cidade or '' }}" placeholder="São Paulo" />
         </div>
 
         {% if session_usuario.perfil == 'produtor' %}
@@ -43,37 +57,29 @@
             <label>CPF</label>
             <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cpf or '—' }}</div>
           </div>
-          <div class="form-group">
-            <label>Localização</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
-              {% if session_usuario.cidade %}{{ session_usuario.cidade }}, {{ session_usuario.estado or '' }}{% else %}—{% endif %}
-            </div>
-          </div>
           <div class="form-group" style="grid-column:span 2;">
             <label>Bio / Apresentação</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem; min-height:80px;">
-              {{ session_usuario.bio or 'Sem bio cadastrada.' }}
-            </div>
+            <textarea id="p_bio" name="bio" rows="3" placeholder="Descreva sua fazenda, produtos principais…">{{ session_usuario.bio or '' }}</textarea>
           </div>
+
         {% elif session_usuario.perfil == 'transportador' %}
           <div class="form-group">
             <label>Tipo de veículo</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.tipo_veiculo or '—' }}</div>
+            <input type="text" id="p_tipo_veiculo" name="tipo_veiculo" value="{{ session_usuario.tipo_veiculo or '' }}" placeholder="Truck, Carreta, Bitrem…" />
           </div>
           <div class="form-group">
             <label>Capacidade máxima (kg)</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
-              {% if session_usuario.capacidade_carga %}{{ session_usuario.capacidade_carga|int }} kg{% else %}—{% endif %}
-            </div>
+            <input type="number" id="p_capacidade_carga" name="capacidade_carga" value="{{ session_usuario.capacidade_carga|int if session_usuario.capacidade_carga else '' }}" placeholder="Ex: 28000" min="0" />
           </div>
           <div class="form-group">
             <label>Cidade atual</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cidade_atual or '—' }}</div>
+            <input type="text" id="p_cidade_atual" name="cidade_atual" value="{{ session_usuario.cidade_atual or '' }}" placeholder="Campinas" />
           </div>
+
         {% elif session_usuario.perfil == 'comprador' %}
           <div class="form-group">
             <label>Tipo de instituição</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.tipo_instituicao or '—' }}</div>
+            <input type="text" id="p_tipo_instituicao" name="tipo_instituicao" value="{{ session_usuario.tipo_instituicao or '' }}" placeholder="Cooperativa, Indústria, Trading…" />
           </div>
           <div class="form-group">
             <label>CNPJ/CPF</label>
@@ -81,21 +87,57 @@
           </div>
           <div class="form-group" style="grid-column:span 2;">
             <label>Endereço de recebimento</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.endereco_recebimento or '—' }}</div>
+            <input type="text" id="p_endereco_recebimento" name="endereco_recebimento" value="{{ session_usuario.endereco_recebimento or '' }}" placeholder="Rua, número, cidade/UF" />
           </div>
           <div class="form-group">
             <label>Capacidade máx. de armazenagem (ton.)</label>
-            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
-              {% if session_usuario.capacidade_armazenagem %}{{ session_usuario.capacidade_armazenagem }} ton.{% else %}—{% endif %}
-            </div>
+            <input type="number" id="p_capacidade_armazenagem" name="capacidade_armazenagem" value="{{ session_usuario.capacidade_armazenagem or '' }}" placeholder="Ex: 500" min="0" step="0.1" />
           </div>
         {% endif %}
+
       </div>
-      <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border);">
-        <p style="font-size:0.8rem; color:var(--text-muted);">
-          Para atualizar seus dados, use a API: <code style="background:var(--surface-2); padding:0.15rem 0.4rem; border-radius:4px; font-size:0.75rem;">PATCH /usuarios/me</code>
-        </p>
+
+      <div style="margin-top:1.5rem; display:flex; gap:0.75rem; justify-content:flex-end;">
+        <button type="button" class="btn btn-primary" onclick="salvarPerfil()">Salvar alterações</button>
       </div>
-    </div>
+    </form>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function salvarPerfil() {
+  const form = document.getElementById('form-perfil');
+  const inputs = form.querySelectorAll('input[name], textarea[name]');
+  const body = {};
+  inputs.forEach(el => {
+    const v = el.value.trim();
+    if (v !== '') {
+      body[el.name] = (el.type === 'number') ? parseFloat(v) : (el.name === 'estado' ? v.toUpperCase() : v);
+    } else {
+      body[el.name] = null;
+    }
+  });
+
+  const res = await fetch('/usuarios/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+
+  const msg = document.getElementById('msg-perfil');
+  msg.style.display = 'block';
+  if (res.ok) {
+    msg.className = 'flash success';
+    msg.textContent = '✅ Perfil atualizado com sucesso!';
+    setTimeout(() => location.reload(), 1200);
+  } else {
+    const d = await res.json();
+    msg.className = 'flash error';
+    msg.textContent = '❌ ' + (d.detail || 'Erro ao salvar.');
+  }
+}
+</script>
 {% endblock %}

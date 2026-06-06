@@ -174,10 +174,21 @@ def logout():
 # ── Dashboard (área logada) ───────────────────────────────────────────────────
 
 @router.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request, db: Session = Depends(get_db)):
+def dashboard(
+    request: Request,
+    produto: str = "",
+    estado: str = "",
+    qtd_min: str = "",
+    qtd_max: str = "",
+    data_de: str = "",
+    data_ate: str = "",
+    db: Session = Depends(get_db),
+):
     usuario = get_session_usuario(request, db)
     if not usuario:
         return redirect_flash("/login", "info", "Faça login para acessar.")
+
+    estado_filtro = estado.upper() if estado else (usuario.estado or "")
 
     # Contratos unificados: usuário aparece em qualquer papel
     meus_contratos = (
@@ -231,24 +242,87 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             NegociacaoLance.proponente_id == usuario.id
         ).all()
         excluir_oferta_ids = {l.oferta_id for l in todos_meus_lances}
-        oportunidades = (
-            db.query(OfertaMercado)
-            .filter(
-                OfertaMercado.autor_id != usuario.id,
-                OfertaMercado.tipo_demanda == tipo_alvo,
-                OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
-                ~OfertaMercado.id.in_(excluir_oferta_ids),
-            )
-            .order_by(OfertaMercado.id.desc())
-            .limit(20)
-            .all()
+        q_oportunidades = db.query(OfertaMercado).filter(
+            OfertaMercado.autor_id != usuario.id,
+            OfertaMercado.tipo_demanda == tipo_alvo,
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
+            ~OfertaMercado.id.in_(excluir_oferta_ids),
         )
+        if estado_filtro:
+            q_oportunidades = q_oportunidades.filter(OfertaMercado.estado_origem == estado_filtro)
+        if produto:
+            q_oportunidades = q_oportunidades.filter(OfertaMercado.produto.ilike(f"%{produto}%"))
+        if qtd_min:
+            try:
+                q_oportunidades = q_oportunidades.filter(OfertaMercado.quantidade_total >= float(qtd_min))
+            except ValueError:
+                pass
+        if qtd_max:
+            try:
+                q_oportunidades = q_oportunidades.filter(OfertaMercado.quantidade_total <= float(qtd_max))
+            except ValueError:
+                pass
+        if data_de:
+            try:
+                from datetime import date as _date
+                q_oportunidades = q_oportunidades.filter(
+                    OfertaMercado.data_limite_envio >= _date.fromisoformat(data_de)
+                )
+            except ValueError:
+                pass
+        if data_ate:
+            try:
+                from datetime import date as _date
+                q_oportunidades = q_oportunidades.filter(
+                    OfertaMercado.data_limite_envio <= _date.fromisoformat(data_ate)
+                )
+            except ValueError:
+                pass
+        oportunidades = q_oportunidades.order_by(OfertaMercado.id.desc()).limit(50).all()
+
+        # Último proponente por oferta (quem está interessado nas minhas ofertas)
+        my_offer_ids = [o.id for o in minhas_ofertas]
+        ultimo_proponente_por_oferta: dict = {}
+        if my_offer_ids:
+            all_lances_minhas = (
+                db.query(NegociacaoLance)
+                .filter(NegociacaoLance.oferta_id.in_(my_offer_ids))
+                .order_by(NegociacaoLance.id.desc())
+                .all()
+            )
+            seen_oferta: set = set()
+            for l in all_lances_minhas:
+                if l.oferta_id not in seen_oferta:
+                    ultimo_proponente_por_oferta[l.oferta_id] = l.proponente_id
+                    seen_oferta.add(l.oferta_id)
+
+        # Mapa unificado de todos os participantes visíveis no dashboard
+        todos_user_ids: set = set()
+        todos_user_ids.update(o.autor_id for o in oportunidades)
+        todos_user_ids.update(o.autor_id for o in ofertas_lance_map.values())
+        todos_user_ids.update(ultimo_proponente_por_oferta.values())
+        for c in meus_contratos:
+            for uid in (c.vendedor_id, c.comprador_id, c.transportador_id):
+                if uid:
+                    todos_user_ids.add(uid)
+        usuarios_map = {
+            u.id: u.nome
+            for u in db.query(Usuario).filter(Usuario.id.in_(todos_user_ids)).all()
+        } if todos_user_ids else {}
 
         ctx.update({
             "minhas_ofertas": minhas_ofertas,
             "lances_ativos": lances_ativos,
             "ofertas_lance_map": ofertas_lance_map,
             "oportunidades": oportunidades,
+            "usuarios_map": usuarios_map,
+            "ultimo_proponente_por_oferta": ultimo_proponente_por_oferta,
+            "filtro_produto": produto,
+            "filtro_estado": estado_filtro,
+            "filtro_qtd_min": qtd_min,
+            "filtro_qtd_max": qtd_max,
+            "filtro_data_de": data_de,
+            "filtro_data_ate": data_ate,
         })
 
     elif usuario.perfil == "transportador":
@@ -278,27 +352,41 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             LanceFrete.proponente_id == usuario.id
         ).all()
         excluir_contrato_ids = {l.contrato_id for l in todos_meus_lances_frete}
-        fretes_disponiveis = (
-            db.query(ContratoTransporte)
-            .filter(
-                ContratoTransporte.status_logistica.in_([
-                    "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
-                ]),
-                ~ContratoTransporte.id.in_(excluir_contrato_ids),
-            )
-            .order_by(ContratoTransporte.id.desc())
-            .all()
+        q_fretes = db.query(ContratoTransporte).filter(
+            ContratoTransporte.status_logistica.in_([
+                "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
+            ]),
+            ~ContratoTransporte.id.in_(excluir_contrato_ids),
         )
+        if estado_filtro:
+            q_fretes = q_fretes.join(
+                OfertaMercado, ContratoTransporte.oferta_id == OfertaMercado.id
+            ).filter(OfertaMercado.estado_origem == estado_filtro)
+        fretes_disponiveis = q_fretes.order_by(ContratoTransporte.id.desc()).all()
+
         for c in fretes_disponiveis:
             if c.oferta_id not in oferta_map:
                 o = db.query(OfertaMercado).filter(OfertaMercado.id == c.oferta_id).first()
                 if o:
                     oferta_map[o.id] = o
 
+        # Mapa unificado de participantes para o transportador
+        todos_user_ids_t: set = set()
+        for c in fretes_disponiveis + list(contrato_frete_map.values()) + meus_contratos:
+            for uid in (c.vendedor_id, c.comprador_id, c.transportador_id):
+                if uid:
+                    todos_user_ids_t.add(uid)
+        usuarios_map = {
+            u.id: u.nome
+            for u in db.query(Usuario).filter(Usuario.id.in_(todos_user_ids_t)).all()
+        } if todos_user_ids_t else {}
+
         ctx.update({
             "fretes_disponiveis": fretes_disponiveis,
             "lances_frete_ativos": lances_frete_ativos,
             "contrato_frete_map": contrato_frete_map,
+            "usuarios_map": usuarios_map,
+            "filtro_estado": estado_filtro,
         })
 
     return render("dashboard.html", request, db, **ctx)
