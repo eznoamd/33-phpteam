@@ -1,85 +1,55 @@
-# 🌾 AgroHub — Conexão no Campo
+# 🚜 AgroHub - CodeRace 2024
+Conectando quem produz, transporta e movimenta o agro.
 
-Plataforma que conecta **produtores rurais**, **transportadores** e **compradores** em um fluxo simples e transparente.
+> Assista ao Pitch de 3 minutos aqui: https://youtu.be/eFlkO_FAPpw
 
----
+## Identificação
 
-## Fluxo principal
+Nome da Equipe: PHPteam
 
-```
-Comprador posta demanda → Produtor aceita → Viagem criada → Transportador aceita
-→ Coleta → Entrega → Avaliações mútuas
-```
+Integrantes:
 
-**Regras de comunicação:**
-- Comprador ↔ Produtor ✅
-- Produtor ↔ Transportador ✅  
-- Comprador ↔ Transportador ❌ (não permitido)
+- Artur Camera Segat - Dev (Fullstack)
+- Enzo Augusto Mucha Domingues - Dev (Fullstack)
+- Gabriel Mazui Azevedo - Dev (Fullstack)
+- Lucas Lima Mendes - Negócios/Pitch
+- Izabely Brum Rodrigues - Negócios/Pitch
 
----
+## Escopo do Projeto
 
-## Perfis
+🎯 O Problema
+A comercialização de safra e a logística no Brasil sofrem com ineficiências graves: negociações via WhatsApp (sem registro/segurança), falta de transparência sobre o histórico de motoristas e prejuízos bilionários causados por caminhões que retornam vazios após a entrega de insumos.
 
-### 🌾 Produtor
-- Vê demandas abertas de compradores
-- Aceita demandas e cria viagens
-- Fala com comprador e transportador
-- Avalia transportador e comprador
+🚀 A Solução
+O AgroHub é uma plataforma que atua como uma "Bolsa de Negócios" do campo. Unificamos a comercialização de safras (venda/compra) com um sistema de logística inteligente. Através de Inteligência Artificial, a plataforma protege o produtor, sugerindo faixas de preço de mercado (guardrails), e otimiza o frete, conectando cargas a caminhoneiros disponíveis na região.
 
-### 🚛 Transportador
-- Vê viagens disponíveis
-- Aceita viagens informando veículo
-- Atualiza status (coleta / em_trânsito / entregue)
-- Fala apenas com produtor
-- Avalia produtor e comprador
+## Stack Tecnológica
+Linguagem: Python
 
-### 🏢 Comprador
-- Publica demandas (produto, qtd, preço máx, prazo)
-- Acompanha status das entregas
-- Fala apenas com produtor
-- Avalia produtor e transportador
+Bibliotecas: [fastapi, uvicorn, sqlalchemy, pydantic, bcrypt, jinja2]
 
----
 
-## Estrutura
+Integração de IA: Gemini API para análise de preços.
+
+## Arquitetura
 
 ```
-agrohub/
+33-phpteam/
 ├── main.py
 ├── requirements.txt
 ├── .env.exemplo
 ├── app/
-│   ├── config.py
+│   ├── config.py            # Pega as variaveis de ambiente
 │   ├── database.py          # SQLite (trocar PostgreSQL em prod)
-│   ├── seguranca.py         # JWT + bcrypt
-│   ├── models/
-│   │   ├── usuario.py       # Produtor / Transportador / Comprador
-│   │   ├── demanda.py       # Demanda postada pelo comprador
-│   │   ├── viagem.py        # Viagem (transporte de carga)
-│   │   └── mensagem.py      # Chat entre usuários
+│   ├── seguranca.py         # Cuida de encriptações e segurança
+│   ├── models/              # Tabelas do banco da aplicação
+│   │   ├── [...]
 │   ├── schemas/             # Validação Pydantic
-│   └── routes/
-│       ├── web.py           # Frontend HTML (Jinja2)
-│       ├── auth.py          # Login / JWT
-│       ├── usuarios.py      # Criação e atualização de perfil
-│       ├── demandas.py      # CRUD demandas
-│       ├── viagens.py       # CRUD viagens + avaliações
-│       ├── mensagens.py     # Chat com regras de acesso
-│       └── catalogo.py      # Lista pública de produtores
-└── templates/
-    ├── base.html
-    ├── landing.html         # Landing page pública
-    ├── catalogo.html        # Lista de produtores (pública)
-    ├── login.html
-    ├── cadastro.html
-    ├── dashboard.html       # Painel adaptado por perfil
-    ├── demandas.html
-    ├── viagens.html
-    ├── perfil.html
-    └── static/css/main.css
+│   └── routes/              # Rotas da aplicação
+│       ├── [...]
+└── templates/               # Todo o front-end da aplicação
+    ├── [...]
 ```
-
----
 
 ## Como rodar
 
@@ -100,38 +70,5 @@ uvicorn main:app --reload
 ```
 
 Acesse: **http://127.0.0.1:8000**  
-API Docs: **http://127.0.0.1:8000/docs**
 
----
-
-## Endpoints principais
-
-| Método | Rota | Quem usa |
-|--------|------|----------|
-| POST | `/usuarios/` | Registro público |
-| POST | `/auth/login` | Todos |
-| GET | `/catalogo/produtores` | Público |
-| GET | `/demandas/` | Produtor (ver abertas) |
-| POST | `/demandas/` | Comprador |
-| POST | `/demandas/{id}/aceitar` | Produtor |
-| POST | `/viagens/` | Produtor |
-| GET | `/viagens/` | Transportador (ver disponíveis) |
-| POST | `/viagens/{id}/aceitar` | Transportador |
-| POST | `/viagens/{id}/status/{status}` | Transportador |
-| POST | `/viagens/{id}/avaliar/produtor` | Produtor |
-| POST | `/viagens/{id}/avaliar/transportador` | Transportador |
-| POST | `/viagens/{id}/avaliar/comprador` | Comprador |
-| POST | `/mensagens/` | Produtor/Comprador/Transportador |
-| GET | `/mensagens/conversa/{id}` | Todos |
-
----
-
-## Próximos passos
-
-- [ ] Migrar SQLite → PostgreSQL
-- [ ] Upload de foto de perfil
-- [ ] Notificações por e-mail
-- [ ] WebSocket para chat em tempo real
-- [ ] Mapa de rotas com API de mapas
-- [ ] Sistema de pagamento integrado
-- [ ] App mobile
+Desenvolvido em 10 horas durante a CodeRace 2024.
