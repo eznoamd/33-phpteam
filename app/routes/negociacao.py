@@ -320,6 +320,7 @@ def aceitar_contra_oferta_oferta(
         status_lance="ACEITO",
     )
     db.add(lance)
+    db.flush()  # garante lance.id antes de criar o contrato
     oferta.contra_valor_saca = None
     oferta.contra_modalidade_venda = None
     oferta.status = "FECHADA"
