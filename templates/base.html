@@ -3,49 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}CodeRace{% endblock %}</title>
-
-  <!-- Fontes -->
+  <title>{% block title %}AgroHub{% endblock %} — Conexão no Campo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-  <!-- CSS global -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
-
-  <!-- CSS extra por página (opcional) -->
   {% block styles %}{% endblock %}
 </head>
 <body>
 
-<!-- ── Navegação ─────────────────────────────────── -->
-<nav>
-  <a href="/" class="nav-logo">▸ coderace</a>
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="/" class="nav-brand">
+    <div class="nav-brand-icon">🌾</div>
+    <span class="nav-brand-text">Agro<span>Hub</span></span>
+  </a>
+
   <div class="nav-links">
+    <a href="/catalogo" class="nav-link {% if request.url.path == '/catalogo' %}active{% endif %}">Produtores</a>
     {% if session_usuario %}
-      <a href="/dashboard" {% if request.url.path == '/dashboard' %}class="active"{% endif %}>dashboard</a>
-      <a href="/ia"        {% if request.url.path == '/ia'        %}class="active"{% endif %}>ia</a>
-      <a href="/auth/logout">sair</a>
+      <a href="/dashboard"  class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+      {% if session_usuario.perfil == 'produtor' or session_usuario.perfil == 'comprador' %}
+        <a href="/demandas"   class="nav-link {% if request.url.path == '/demandas' %}active{% endif %}">Demandas</a>
+      {% endif %}
+      {% if session_usuario.perfil == 'transportador' %}
+        <a href="/viagens"    class="nav-link {% if request.url.path == '/viagens' %}active{% endif %}">Viagens</a>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="nav-actions">
+    {% if session_usuario %}
+      <div class="nav-user-chip">
+        <div class="avatar" style="width:26px;height:26px;font-size:0.65rem;">{{ session_usuario.nome[0].upper() }}</div>
+        <span>{{ session_usuario.nome.split()[0] }}</span>
+        <span class="badge badge-gray" style="font-size:0.62rem;">{{ session_usuario.perfil }}</span>
+      </div>
+      <a href="/perfil"       class="btn btn-ghost btn-sm">Perfil</a>
+      <a href="/auth/logout"  class="btn btn-ghost btn-sm">Sair</a>
     {% else %}
-      <a href="/login"    {% if request.url.path == '/login'    %}class="active"{% endif %}>login</a>
-      <a href="/cadastro" {% if request.url.path == '/cadastro' %}class="active"{% endif %}>cadastro</a>
+      <a href="/login"    class="btn btn-ghost btn-sm">Entrar</a>
+      <a href="/cadastro" class="btn btn-primary btn-sm">Cadastrar</a>
     {% endif %}
   </div>
 </nav>
 
-<!-- ── Conteúdo principal ─────────────────────────── -->
-<div class="container">
-
-  <!-- Flash messages (limpas automaticamente via cookie em web.py) -->
+{% block layout %}
+<div class="page">
   {% for msg in flash_messages %}
-    <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    <div class="flash {{ msg.tipo }}">
+      {% if msg.tipo == 'success' %}✅{% elif msg.tipo == 'error' %}❌{% elif msg.tipo == 'info' %}ℹ️{% elif msg.tipo == 'warning' %}⚠️{% endif %}
+      {{ msg.texto }}
+    </div>
   {% endfor %}
-
   {% block content %}{% endblock %}
-
 </div>
+{% endblock %}
 
-<!-- JS global (opcional) -->
 {% block scripts %}{% endblock %}
-
 </body>
 </html>

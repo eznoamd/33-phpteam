@@ -6,4 +6,4 @@ class TokenResposta(BaseModel):
     token_type: str = "bearer"
     usuario_id: int
     nome: str
-    email: str
+    perfil: str

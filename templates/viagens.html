@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Viagens{% endblock %}
+
+{% block layout %}
+<div class="layout-sidebar">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/viagens"   class="sidebar-link active"><span class="icon">🚛</span> Viagens</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/perfil"      class="sidebar-link"><span class="icon">👤</span> Perfil</a>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% for msg in flash_messages %}
+      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    {% endfor %}
+
+    <div class="page-header">
+      <h1>🚛 Viagens disponíveis</h1>
+      <p>Cargas aguardando transportador.</p>
+    </div>
+
+    {% if viagens %}
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      {% for v in viagens %}
+      <div class="card" style="margin-bottom:0;">
+        <div class="flex items-center justify-between" style="margin-bottom:1rem;">
+          <div>
+            <strong style="color:var(--white); font-family:var(--font-display); font-size:1.05rem;">{{ v.tipo_produto }}</strong>
+            <span class="badge badge-yellow" style="margin-left:0.5rem;">aguardando</span>
+          </div>
+          {% if session_usuario.perfil == 'transportador' %}
+          <button class="btn btn-primary btn-sm" onclick="abrirModalAceitar({{ v.id }})">Aceitar viagem</button>
+          {% endif %}
+        </div>
+        <div class="grid-4" style="gap:0.75rem;">
+          <div>
+            <div class="stat-label">Rota</div>
+            <div style="color:var(--text); font-size:0.85rem;">{{ v.origem }} → {{ v.destino }}</div>
+          </div>
+          <div>
+            <div class="stat-label">Peso</div>
+            <div style="color:var(--text); font-weight:600;">{{ v.peso_kg|int }} kg</div>
+          </div>
+          <div>
+            <div class="stat-label">Coleta</div>
+            <div style="color:var(--text);">{{ v.data_coleta.strftime('%d/%m/%Y') }}</div>
+          </div>
+          <div>
+            <div class="stat-label">Valor estimado</div>
+            <div style="color:var(--verde-light); font-weight:700;">R$ {{ "%.0f"|format(v.preco_final or 0) }}</div>
+          </div>
+        </div>
+        <div style="margin-top:0.5rem; font-size:0.75rem; color:var(--text-muted);">
+          Publicada em {{ v.criado_em.strftime('%d/%m/%Y às %H:%M') }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card empty-state">
+      <div class="empty-state-icon">🚛</div>
+      <h3>Nenhuma viagem disponível</h3>
+      <p>Aguarde produtores criarem novas viagens.</p>
+    </div>
+    {% endif %}
+  </main>
+</div>
+
+<!-- Modal aceitar viagem -->
+<div id="modal-aceitar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="max-width:400px; width:100%; margin:0;">
+    <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
+      <h2 style="font-family:var(--font-display); color:var(--white);">🚛 Aceitar viagem</h2>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-aceitar').style.display='none'">✕</button>
+    </div>
+    <input type="hidden" id="viagem-id-aceitar" />
+    <div class="form-group">
+      <label>Tipo de veículo</label>
+      <input type="text" id="tipo_veiculo_v" placeholder="Ex: Caminhão baú, Carreta frigorífica..." required />
+    </div>
+    <div class="form-group">
+      <label>Capacidade do veículo (kg)</label>
+      <input type="number" id="cap_veiculo" placeholder="Ex: 28000" min="1" required />
+    </div>
+    <div class="flex gap-2" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-aceitar').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" onclick="aceitarViagem()">Confirmar</button>
+    </div>
+    <div id="msg-aceitar" style="margin-top:0.75rem; display:none;"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModalAceitar(id) {
+  document.getElementById('viagem-id-aceitar').value = id;
+  document.getElementById('modal-aceitar').style.display = 'flex';
+}
+async function aceitarViagem() {
+  const id = document.getElementById('viagem-id-aceitar').value;
+  const token = document.cookie.split(';').find(c=>c.trim().startsWith('agrohub_session='))?.split('=')[1];
+  const body = {
+    tipo_veiculo_viagem: document.getElementById('tipo_veiculo_v').value,
+    capacidade_veiculo: parseFloat(document.getElementById('cap_veiculo').value),
+  };
+  const res = await fetch('/viagens/'+id+'/aceitar', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify(body) });
+  const div = document.getElementById('msg-aceitar');
+  div.style.display='block';
+  if (res.ok) { div.className='flash success'; div.textContent='✅ Viagem aceita! Atualizando...'; setTimeout(()=>location.reload(),1200); }
+  else { const d=await res.json(); div.className='flash error'; div.textContent='❌ '+(d.detail||'Erro.'); }
+}
+</script>
+{% endblock %}

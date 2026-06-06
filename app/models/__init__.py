@@ -1,5 +1,4 @@
-# Importe todos os models aqui para que o SQLAlchemy os reconheça
-# ao criar as tabelas no banco.
-
 from app.models.usuario import Usuario
-from app.models.item import Item
+from app.models.demanda import Demanda
+from app.models.viagem import Viagem
+from app.models.mensagem import Mensagem

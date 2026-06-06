@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Meu Perfil{% endblock %}
+
+{% block layout %}
+<div class="layout-sidebar">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/perfil"    class="sidebar-link active"><span class="icon">👤</span> Meu Perfil</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% for msg in flash_messages %}
+      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    {% endfor %}
+
+    <div class="page-header">
+      <h1>👤 Meu Perfil</h1>
+      <p>Gerencie suas informações pessoais e dados da conta.</p>
+    </div>
+
+    <!-- Cabeçalho do perfil -->
+    <div class="card" style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1.5rem;">
+      <div class="avatar avatar-lg" style="width:64px;height:64px;font-size:1.5rem;">{{ session_usuario.nome[0].upper() }}</div>
+      <div style="flex:1;">
+        <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--white);">{{ session_usuario.nome }}</div>
+        <div style="color:var(--text-muted); font-size:0.85rem;">{{ session_usuario.email }}</div>
+        <div style="display:flex; gap:0.5rem; margin-top:0.4rem; align-items:center;">
+          <span class="badge badge-green">{{ session_usuario.perfil }}</span>
+          <span class="stars">★</span>
+          <span style="color:var(--white); font-weight:600;">{{ "%.1f"|format(session_usuario.avaliacao_media) }}</span>
+          <span style="color:var(--text-muted); font-size:0.78rem;">({{ session_usuario.total_avaliacoes }} avaliações)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados específicos do perfil -->
+    <div class="card">
+      <div class="card-label">Dados da conta — {{ session_usuario.perfil | capitalize }}</div>
+      <div class="grid-2" style="gap:1.25rem;">
+
+        <!-- Campos comuns -->
+        <div class="form-group">
+          <label>Nome completo</label>
+          <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.nome }}</div>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.email }}</div>
+        </div>
+
+        {% if session_usuario.perfil == 'produtor' %}
+          <div class="form-group">
+            <label>CPF</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cpf or '—' }}</div>
+          </div>
+          <div class="form-group">
+            <label>Localização</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
+              {% if session_usuario.cidade %}{{ session_usuario.cidade }}, {{ session_usuario.estado or '' }}{% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="form-group" style="grid-column:span 2;">
+            <label>Bio / Apresentação</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem; min-height:80px;">
+              {{ session_usuario.bio or 'Sem bio cadastrada.' }}
+            </div>
+          </div>
+
+        {% elif session_usuario.perfil == 'transportador' %}
+          <div class="form-group">
+            <label>Tipo de veículo</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.tipo_veiculo or '—' }}</div>
+          </div>
+          <div class="form-group">
+            <label>Capacidade máxima (kg)</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
+              {% if session_usuario.capacidade_carga %}{{ session_usuario.capacidade_carga|int }} kg{% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Cidade atual</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cidade_atual or '—' }}</div>
+          </div>
+
+        {% elif session_usuario.perfil == 'comprador' %}
+          <div class="form-group">
+            <label>Tipo de instituição</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.tipo_instituicao or '—' }}</div>
+          </div>
+          <div class="form-group">
+            <label>CNPJ/CPF</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cnpj or session_usuario.cpf or '—' }}</div>
+          </div>
+          <div class="form-group" style="grid-column:span 2;">
+            <label>Endereço de recebimento</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.endereco_recebimento or '—' }}</div>
+          </div>
+          <div class="form-group">
+            <label>Capacidade máx. de armazenagem (ton.)</label>
+            <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">
+              {% if session_usuario.capacidade_armazenagem %}{{ session_usuario.capacidade_armazenagem }} ton.{% else %}—{% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+
+      <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border);">
+        <p style="font-size:0.8rem; color:var(--text-muted);">
+          Para atualizar seus dados, use a API: <code style="background:var(--surface-2); padding:0.15rem 0.4rem; border-radius:4px; font-size:0.75rem;">PATCH /usuarios/me</code>
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

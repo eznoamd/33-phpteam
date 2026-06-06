@@ -23,9 +23,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def criar_token(dados: dict) -> str:
     payload = dados.copy()
-    expiracao = datetime.now(timezone.utc) + timedelta(
-        minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expiracao = datetime.now(timezone.utc) + timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload.update({"exp": expiracao})
     return jwt.encode(payload, config.SECRET_KEY, algorithm=config.ALGORITHM)
 
@@ -36,22 +34,20 @@ def obter_usuario_atual(
 ):
     from app.models.usuario import Usuario
 
-    erro_credenciais = HTTPException(
+    erro = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token inválido ou expirado. Faça login novamente.",
+        detail="Token inválido ou expirado.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
     try:
         payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
         usuario_id: str = payload.get("sub")
         if usuario_id is None:
-            raise erro_credenciais
+            raise erro
     except JWTError:
-        raise erro_credenciais
+        raise erro
 
     usuario = db.query(Usuario).filter(Usuario.id == int(usuario_id)).first()
     if usuario is None or not usuario.ativo:
-        raise erro_credenciais
-
+        raise erro
     return usuario

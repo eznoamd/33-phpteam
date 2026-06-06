@@ -1,1 +1,1 @@
-from app.routes import usuarios, itens, auth, ia, web
+from app.routes import auth, usuarios, demandas, viagens, mensagens, catalogo, web
