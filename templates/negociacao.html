@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Negociação — {{ oferta.produto }}{% endblock %}
+{% block title %}Negociação — {{ (oferta.produto | string).split('.')[-1] }}{% endblock %}
 
 {% block styles %}
 <style>
@@ -85,7 +85,7 @@
       <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
         <a href="/mercado" style="color:var(--text-muted); font-size:0.85rem;">← Mercado</a>
         <span style="color:var(--border);">/</span>
-        <h1 style="margin:0;">{{ oferta.produto }}</h1>
+        <h1 style="margin:0;">{{ (oferta.produto | string).split('.')[-1] }}</h1>
         <span class="badge {% if oferta.tipo_demanda == 'QUERO_VENDER' %}badge-green{% else %}badge-blue{% endif %}">
           {% if oferta.tipo_demanda == 'QUERO_VENDER' %}Vende{% else %}Compra{% endif %}
         </span>
@@ -95,7 +95,7 @@
       </div>
       <p style="margin-top:0.4rem; color:var(--text-soft); font-size:0.88rem;">
         {{ oferta.quantidade_total|int }} sacas ·
-        {% if oferta.preco_unidade_inicial %}Referência R$ {{ "%.2f"|format(oferta.preco_unidade_inicial) }}/saca · {% endif %}
+        {% if oferta.preco_unidade_inicial is not none %}Referência R$ {{ "%.2f"|format(oferta.preco_unidade_inicial) }}/saca · {% endif %}
         Envio até {{ oferta.data_limite_envio.strftime('%d/%m/%Y') }} ·
         <span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">location_on</span> {{ oferta.cidade_origem }}{% if oferta.estado_origem %}/{{ oferta.estado_origem }}{% endif %}
         · por <strong>{{ autor.nome.split()[0] }}</strong>
@@ -345,7 +345,7 @@
               </label>
               <input type="number" id="valor_lance" step="0.01" min="0.01"
                      placeholder="Ex: 148.50"
-                     {% if oferta.preco_unidade_inicial %}value="{{ "%.2f"|format(oferta.preco_unidade_inicial) }}"{% endif %} />
+                     {% if oferta.preco_unidade_inicial is not none %}value="{{ "%.2f"|format(oferta.preco_unidade_inicial) }}"{% endif %} />
             </div>
             <div class="form-group">
               <label>Modalidade de entrega</label>

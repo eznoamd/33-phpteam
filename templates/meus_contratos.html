@@ -28,7 +28,7 @@
           {% for c in fretes_disponiveis %}
           {% set oferta = oferta_map.get(c.oferta_id) %}
           <tr>
-            <td><strong>{{ oferta.produto if oferta else '—' }}</strong></td>
+            <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
             <td style="color:var(--text-soft);">{{ c.modalidade_venda.replace('_', ' ') }}</td>
             <td style="color:var(--verde-light); font-weight:700;">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
             <td>
@@ -79,7 +79,7 @@
           {% set oferta = oferta_map.get(c.oferta_id) %}
           <tr>
             <td style="color:var(--text-muted);">#{{ c.id }}</td>
-            <td><strong>{{ oferta.produto if oferta else '—' }}</strong>
+            <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong>
               {% if oferta %}<span style="font-size:0.75rem; color:var(--text-muted);"> · {{ oferta.quantidade_total|int }} sacas</span>{% endif %}
             </td>
             <td style="color:var(--text-soft);">{{ c.modalidade_venda.replace('_', ' ') }}</td>

@@ -30,7 +30,7 @@
         <div>
           <div class="stat-label">Produto</div>
           <div style="font-family:var(--font-display); font-size:1.1rem; color:var(--white);">
-            {{ oferta.produto if oferta else '—' }}
+            {{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}
           </div>
         </div>
         <div>

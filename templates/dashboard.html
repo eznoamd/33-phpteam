@@ -48,7 +48,7 @@
           {% for o in ofertas_disponiveis %}
           <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
             <div>
-              <strong style="color:var(--white);">{{ o.produto }}</strong>
+              <strong style="color:var(--white);">{{ (o.produto | string).split('.')[-1] }}</strong>
               <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
                 {{ o.quantidade_total|int }} sacas
                 {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}
@@ -80,7 +80,7 @@
             <tbody>
             {% for o in minhas_ofertas %}
             <tr>
-              <td><strong>{{ o.produto }}</strong></td>
+              <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
               <td>{{ o.quantidade_total|int }}</td>
               <td>
                 <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% else %}badge-gray{% endif %}">
@@ -233,7 +233,7 @@
           {% for o in ofertas_disponiveis %}
           <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
             <div>
-              <strong style="color:var(--white);">{{ o.produto }}</strong>
+              <strong style="color:var(--white);">{{ (o.produto | string).split('.')[-1] }}</strong>
               <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
                 {{ o.quantidade_total|int }} sacas
                 {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}
@@ -269,7 +269,7 @@
             <tbody>
             {% for o in minhas_ofertas %}
             <tr>
-              <td><strong>{{ o.produto }}</strong></td>
+              <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
               <td>{{ o.quantidade_total|int }}</td>
               <td>
                 <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% else %}badge-gray{% endif %}">
