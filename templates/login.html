@@ -4,8 +4,10 @@
 {% block content %}
 <div class="page-sm" style="padding-top:3rem;">
   <div style="text-align:center; margin-bottom:2rem;">
-    <div style="font-size:2.2rem; margin-bottom:0.75rem;">🌾</div>
-    <h1 style="font-family:var(--font-display); font-size:1.7rem; font-weight:700; color:var(--white); margin-bottom:0.3rem;">Bem-vindo de volta</h1>
+    <div style="display:flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:var(--radius-lg); background:var(--verde-glow); border:1px solid rgba(74,124,35,0.3); margin:0 auto 0.75rem;">
+      <svg class="icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--verde-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+    </div>
+    <h1 style="font-family:var(--font-display); font-size:1.7rem; font-weight:400; color:var(--white); margin-bottom:0.3rem;">Bem-vindo de volta</h1>
     <p style="color:var(--text-muted); font-size:0.9rem;">
       Não tem conta?
       <a href="/cadastro" style="color:var(--verde-light); text-decoration:none; font-weight:600;">Cadastre-se</a>
@@ -28,7 +30,10 @@
         <label for="senha">Senha</label>
         <input type="password" id="senha" name="senha" required placeholder="••••••••" />
       </div>
-      <button type="submit" class="btn btn-primary w-full" style="margin-top:0.5rem;">Entrar no AgroHub →</button>
+      <button type="submit" class="btn btn-primary w-full" style="margin-top:0.5rem;">
+        Entrar no AgroHub
+        <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
     </form>
   </div>
 </div>

@@ -6,12 +6,21 @@
   <aside class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-label">Principal</div>
-      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
-      <a href="/perfil"    class="sidebar-link active"><span class="icon">👤</span> Meu Perfil</a>
+      <a href="/dashboard" class="sidebar-link">
+        <span class="icon"><svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        Dashboard
+      </a>
+      <a href="/perfil" class="sidebar-link active">
+        <span class="icon"><svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+        Meu Perfil
+      </a>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Conta</div>
-      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);">
+        <span class="icon"><svg class="icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+        Sair
+      </a>
     </div>
   </aside>
 
@@ -21,15 +30,14 @@
     {% endfor %}
 
     <div class="page-header">
-      <h1>👤 Meu Perfil</h1>
+      <h1>Meu Perfil</h1>
       <p>Gerencie suas informações pessoais e dados da conta.</p>
     </div>
 
-    <!-- Cabeçalho do perfil -->
     <div class="card" style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1.5rem;">
       <div class="avatar avatar-lg" style="width:64px;height:64px;font-size:1.5rem;">{{ session_usuario.nome[0].upper() }}</div>
       <div style="flex:1;">
-        <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--white);">{{ session_usuario.nome }}</div>
+        <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:400; color:var(--white);">{{ session_usuario.nome }}</div>
         <div style="color:var(--text-muted); font-size:0.85rem;">{{ session_usuario.email }}</div>
         <div style="display:flex; gap:0.5rem; margin-top:0.4rem; align-items:center;">
           <span class="badge badge-green">{{ session_usuario.perfil }}</span>
@@ -40,12 +48,9 @@
       </div>
     </div>
 
-    <!-- Dados específicos do perfil -->
     <div class="card">
       <div class="card-label">Dados da conta — {{ session_usuario.perfil | capitalize }}</div>
       <div class="grid-2" style="gap:1.25rem;">
-
-        <!-- Campos comuns -->
         <div class="form-group">
           <label>Nome completo</label>
           <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.nome }}</div>
@@ -72,7 +77,6 @@
               {{ session_usuario.bio or 'Sem bio cadastrada.' }}
             </div>
           </div>
-
         {% elif session_usuario.perfil == 'transportador' %}
           <div class="form-group">
             <label>Tipo de veículo</label>
@@ -88,7 +92,6 @@
             <label>Cidade atual</label>
             <div style="color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:0.65rem 0.9rem;">{{ session_usuario.cidade_atual or '—' }}</div>
           </div>
-
         {% elif session_usuario.perfil == 'comprador' %}
           <div class="form-group">
             <label>Tipo de instituição</label>
@@ -109,16 +112,13 @@
             </div>
           </div>
         {% endif %}
-
       </div>
-
       <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border);">
         <p style="font-size:0.8rem; color:var(--text-muted);">
           Para atualizar seus dados, use a API: <code style="background:var(--surface-2); padding:0.15rem 0.4rem; border-radius:4px; font-size:0.75rem;">PATCH /usuarios/me</code>
         </p>
       </div>
     </div>
-
   </main>
 </div>
 {% endblock %}
