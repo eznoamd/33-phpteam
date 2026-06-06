@@ -180,46 +180,67 @@
 <script>
 const PERFIL = "{{ session_usuario.perfil if session_usuario else '' }}";
 
-function getCookie(name) {
-  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
+function formatarErro(detail) {
+  if (!detail) return 'Erro ao publicar oferta.';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(e => {
+      const campo = e.loc ? e.loc.slice(1).join('.') : '';
+      return campo ? `${campo}: ${e.msg}` : e.msg;
+    }).join(' · ');
+  }
+  return JSON.stringify(detail);
 }
 
 async function criarOferta() {
-  const token = getCookie('agrohub_session');
+  const produto = document.getElementById('o_produto').value.trim();
+  const qtd = document.getElementById('o_qtd').value;
+  const data = document.getElementById('o_data').value;
+  const cidade = document.getElementById('o_cidade').value.trim();
+
+  const div = document.getElementById('msg-oferta');
+  div.style.display = 'block';
+
+  if (!produto || !qtd || !data || !cidade) {
+    div.className = 'flash error';
+    div.textContent = 'Preencha produto, quantidade, data e cidade.';
+    return;
+  }
+
   const btn = document.getElementById('btn-publicar');
   btn.disabled = true;
   btn.textContent = 'Publicando...';
 
   const tipo = PERFIL === 'produtor' ? 'QUERO_VENDER' : 'QUERO_COMPRAR';
   const precoVal = document.getElementById('o_preco').value;
+  const estadoVal = document.getElementById('o_estado').value.trim().toUpperCase();
+
   const body = {
     tipo_demanda: tipo,
-    produto: document.getElementById('o_produto').value,
-    quantidade_total: parseFloat(document.getElementById('o_qtd').value),
+    produto,
+    quantidade_total: parseFloat(qtd),
     preco_saca_inicial: precoVal ? parseFloat(precoVal) : null,
-    data_limite_envio: document.getElementById('o_data').value,
-    cidade_origem: document.getElementById('o_cidade').value,
-    estado_origem: document.getElementById('o_estado').value.toUpperCase() || null,
+    data_limite_envio: data,
+    cidade_origem: cidade,
+    estado_origem: estadoVal || null,
   };
-
-  const div = document.getElementById('msg-oferta');
-  div.style.display = 'block';
 
   const res = await fetch('/ofertas/', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify(body),
   });
 
   if (res.ok) {
     const d = await res.json();
     div.className = 'flash success';
-    div.innerHTML = `✅ Oferta publicada! IA definiu guardrails: R$ ${d.ia_preco_minimo?.toFixed(2) ?? '–'}–${d.ia_preco_maximo?.toFixed(2) ?? '–'}/saca. Redirecionando...`;
+    div.innerHTML = `✅ Oferta publicada! IA: R$ ${d.ia_preco_minimo?.toFixed(2) ?? '–'}–${d.ia_preco_maximo?.toFixed(2) ?? '–'}/saca. Redirecionando...`;
     setTimeout(() => location.reload(), 1500);
   } else {
     const d = await res.json();
     div.className = 'flash error';
-    div.textContent = '❌ ' + (d.detail || 'Erro ao publicar oferta.');
+    div.textContent = '❌ ' + formatarErro(d.detail);
     btn.disabled = false;
     btn.textContent = 'Publicar oferta';
   }
