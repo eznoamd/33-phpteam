@@ -19,6 +19,11 @@ templates = Jinja2Templates(directory="templates")
 COOKIE_NAME = "agrohub_session"
 
 
+def primeiro_nome(nome: str) -> str:
+    nome_limpo = (nome or "").strip()
+    return nome_limpo.split()[0] if nome_limpo else "usuário"
+
+
 def get_session_usuario(request: Request, db: Session) -> Usuario | None:
     token = request.cookies.get(COOKIE_NAME)
     if not token:
@@ -109,8 +114,15 @@ def login_form(
     if not usuario.ativo:
         return redirect_flash("/login", "error", "Conta desativada.")
     token = criar_token({"sub": str(usuario.id)})
-    resp = redirect_flash("/dashboard", "success", f"Bem-vindo, {usuario.nome.split()[0]}!")
-    resp.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax")
+    resp = redirect_flash("/dashboard", "success", f"Bem-vindo, {primeiro_nome(usuario.nome)}!")
+    resp.set_cookie(
+        COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        secure=request.url.scheme == "https",
+    )
     return resp
 
 
@@ -139,8 +151,15 @@ def cadastro_form(
     db.commit()
     db.refresh(novo)
     token = criar_token({"sub": str(novo.id)})
-    resp = redirect_flash("/dashboard", "success", f"Conta criada! Bem-vindo, {novo.nome.split()[0]}!")
-    resp.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax")
+    resp = redirect_flash("/dashboard", "success", f"Conta criada! Bem-vindo, {primeiro_nome(novo.nome)}!")
+    resp.set_cookie(
+        COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        secure=request.url.scheme == "https",
+    )
     return resp
 
 
