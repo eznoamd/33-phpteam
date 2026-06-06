@@ -22,7 +22,8 @@
     <a href="/catalogo" class="nav-link {% if request.url.path == '/catalogo' %}active{% endif %}">Produtores</a>
     <a href="/mercado"  class="nav-link {% if request.url.path == '/mercado' %}active{% endif %}">Mercado</a>
     {% if session_usuario %}
-      <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="/dashboard"      class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="/meus-contratos" class="nav-link {% if request.url.path == '/meus-contratos' %}active{% endif %}">Contratos</a>
     {% endif %}
   </div>
 
