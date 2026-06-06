@@ -93,7 +93,8 @@
               <span class="badge
                 {% if c.status_logistica == 'ENTREGUE' %}badge-green
                 {% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue
-                {% else %}badge-yellow{% endif %}">
+                {% elif c.status_logistica == 'A_ENVIAR' %}badge-yellow
+                {% else %}badge-gray{% endif %}">
                 {{ c.status_logistica.lower().replace('_', ' ') }}
               </span>
             </td>

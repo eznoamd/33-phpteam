@@ -13,7 +13,7 @@
           <span class="badge
             {% if contrato.status_logistica == 'ENTREGUE' %}badge-green
             {% elif contrato.status_logistica == 'EM_TRANSITO' %}badge-blue
-            {% elif contrato.status_logistica == 'EM_NEGOCIACAO_FRETE' %}badge-yellow
+            {% elif contrato.status_logistica in ('A_ENVIAR', 'EM_NEGOCIACAO_FRETE') %}badge-yellow
             {% else %}badge-gray{% endif %}" id="badge-status">
             {{ contrato.status_logistica.lower().replace('_', ' ') }}
           </span>
@@ -124,11 +124,19 @@
       <div style="display:flex; gap:0; margin-bottom:1.5rem;">
         {% set steps = [
           ('AGUARDANDO_TRANSPORTADOR', 'Aguardando transportador'),
-          ('EM_NEGOCIACAO_FRETE', 'Negociando frete'),
-          ('EM_TRANSITO', 'Em trânsito'),
-          ('ENTREGUE', 'Entregue')
+          ('EM_NEGOCIACAO_FRETE',      'Negociando frete'),
+          ('A_ENVIAR',                 'A enviar'),
+          ('EM_TRANSITO',              'Em trânsito'),
+          ('ENTREGUE',                 'Entregue')
         ] %}
-        {% set step_order = {'AGUARDANDO_TRANSPORTADOR': 0, 'EM_NEGOCIACAO_FRETE': 1, 'EM_TRANSITO': 2, 'ENTREGUE': 3} %}
+        {% set step_order = {
+          'AGUARDANDO_TRANSPORTADOR': 0,
+          'EM_NEGOCIACAO_FRETE': 1,
+          'AGUARDANDO_ACEITE_FRETE': 1,
+          'A_ENVIAR': 2,
+          'EM_TRANSITO': 3,
+          'ENTREGUE': 4
+        } %}
         {% set current_step = step_order.get(contrato.status_logistica, 0) %}
         {% for step_key, step_label in steps %}
         {% set step_idx = loop.index0 %}
@@ -151,11 +159,22 @@
         {% endfor %}
       </div>
 
-      <!-- Atualizar status (transportador em trânsito) -->
-      {% if contrato.transportador_id == session_usuario.id and contrato.status_logistica == 'EM_TRANSITO' %}
-      <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')">✅ Marcar como entregue</button>
-      {% elif contrato.status_logistica == 'ENTREGUE' %}
-      <div class="badge badge-green">Entregue</div>
+      <!-- Botões de avanço de status (apenas transportador responsável) -->
+      {% if contrato.transportador_id == session_usuario.id %}
+        {% if contrato.status_logistica == 'A_ENVIAR' %}
+        <button class="btn btn-primary" onclick="atualizarStatus('EM_TRANSITO')">
+          <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Marcar como em trânsito
+        </button>
+        {% elif contrato.status_logistica == 'EM_TRANSITO' %}
+        <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')">
+          <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Marcar como entregue
+        </button>
+        {% endif %}
+      {% endif %}
+      {% if contrato.status_logistica == 'ENTREGUE' %}
+      <div class="badge badge-green" style="font-size:0.85rem; padding:0.3rem 0.75rem;">Entregue</div>
       {% endif %}
       <div id="msg-logistica" style="display:none; margin-top:0.75rem;"></div>
     </div>
@@ -164,7 +183,7 @@
     <div class="card" id="card-frete">
       <div class="card-label">Negociação do Frete</div>
 
-      {% if contrato.status_logistica in ('EM_TRANSITO', 'ENTREGUE') and contrato.valor_frete_saca_final %}
+      {% if contrato.status_logistica in ('A_ENVIAR', 'EM_TRANSITO', 'ENTREGUE') and contrato.valor_frete_saca_final %}
       <!-- Frete fechado -->
       <div class="flash success" style="margin-bottom:0;">
         ✅ Frete fechado em <strong>R$ {{ "%.2f"|format(contrato.valor_frete_saca_final) }}/saca</strong>
@@ -400,7 +419,7 @@ function conectarSSEFrete() {
 
   sseFreteConn.addEventListener('contrato_atualizado', e => {
     const d = JSON.parse(e.data);
-    if (d.status_logistica === 'EM_TRANSITO' && !_freteExibido) {
+    if (d.status_logistica === 'A_ENVIAR' && !_freteExibido) {
       _freteExibido = true;
       sseFreteConn?.close(); sseFreteConn = null;
       mostrarFreteAceito(d.valor_frete_saca_final);
@@ -430,7 +449,7 @@ function mostrarFreteAceito(valor) {
   const el = document.getElementById('valor-frete-display');
   if (el) el.innerHTML = `<span style="font-weight:700;color:var(--verde-light);">R$ ${valor.toFixed(2)}/saca</span>`;
   const badge = document.getElementById('badge-status');
-  if (badge) { badge.className = 'badge badge-blue'; badge.textContent = 'em trânsito'; }
+  if (badge) { badge.className = 'badge badge-yellow'; badge.textContent = 'a enviar'; }
   setTimeout(() => location.reload(), 2000);
 }
 

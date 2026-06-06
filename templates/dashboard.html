@@ -198,7 +198,7 @@
             <td>
               <span class="badge badge-yellow">{{ c.status_logistica.lower().replace('_', ' ') }}</span>
             </td>
-            <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver frete</a></td>
+            <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Negociar frete</a></td>
           </tr>
           {% endfor %}
           </tbody>
@@ -297,11 +297,15 @@
           <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
           <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
           <td>
-            <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
+            <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica in ('AGUARDANDO_TRANSPORTADOR', 'A_ENVIAR') %}badge-yellow{% else %}badge-gray{% endif %}">
               {{ c.status_logistica.lower().replace('_', ' ') }}
             </span>
           </td>
-          <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+          <td>
+            <a href="/contratos/{{ c.id }}" class="btn {% if c.status_logistica == 'ENTREGUE' %}btn-ghost{% else %}btn-primary{% endif %} btn-sm">
+              {% if c.status_logistica == 'ENTREGUE' %}Ver{% else %}Acompanhar{% endif %}
+            </a>
+          </td>
         </tr>
         {% endfor %}
         </tbody>

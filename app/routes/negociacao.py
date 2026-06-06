@@ -551,7 +551,7 @@ def responder_lance_frete(
         _rejeitar_pendentes(contrato_id, exceto_id=lance_id, novo_status="RECUSADO_AUTO", db=db)
         contrato.transportador_id = lance.proponente_id
         contrato.valor_frete_saca_final = lance.valor_frete_saca
-        contrato.status_logistica = "EM_TRANSITO"
+        contrato.status_logistica = "A_ENVIAR"
         db.commit()
         return {"resultado": "ACEITO", "valor_frete_saca_final": contrato.valor_frete_saca_final}
 
@@ -616,7 +616,7 @@ def aceitar_contra_oferta(
     db.add(lance)
     contrato.transportador_id = usuario.id
     contrato.valor_frete_saca_final = contrato.contra_valor_frete
-    contrato.status_logistica = "EM_TRANSITO"
+    contrato.status_logistica = "A_ENVIAR"
     db.commit()
     return {"resultado": "ACEITO", "valor_frete_saca_final": contrato.valor_frete_saca_final}
 
@@ -671,7 +671,7 @@ async def sse_contrato_eventos(contrato_id: int, request: Request, since_id_fret
                             "valor_frete_saca_final": contrato_obj.valor_frete_saca_final,
                         }
                         yield f"event: contrato_atualizado\ndata: {json.dumps(payload)}\n\n"
-                        if status_atual == "EM_TRANSITO":
+                        if status_atual == "A_ENVIAR":
                             return
                     ultimo_status_logistica = status_atual
             finally:
@@ -713,8 +713,10 @@ def atualizar_status_logistica(
         raise HTTPException(404, "Contrato não encontrado.")
     if contrato.transportador_id != usuario.id:
         raise HTTPException(403, "Apenas o transportador responsável pode atualizar o status.")
-    if dados.status not in {"EM_TRANSITO", "ENTREGUE"}:
-        raise HTTPException(400, "Status deve ser EM_TRANSITO ou ENTREGUE.")
+    transicoes = {"A_ENVIAR": "EM_TRANSITO", "EM_TRANSITO": "ENTREGUE"}
+    proximo = transicoes.get(contrato.status_logistica)
+    if dados.status not in transicoes.values() or dados.status != proximo:
+        raise HTTPException(400, f"Transição inválida: {contrato.status_logistica} → {dados.status}.")
     contrato.status_logistica = dados.status
     db.commit()
     return {"resultado": "Status atualizado.", "status_logistica": contrato.status_logistica}
