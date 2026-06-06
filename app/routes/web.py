@@ -137,7 +137,11 @@ def cadastro_form(
     novo = Usuario(nome=nome, email=email, senha_hash=hash_senha(senha), perfil=perfil)
     db.add(novo)
     db.commit()
-    return redirect_flash("/login", "success", "Conta criada! Faça login para continuar.")
+    db.refresh(novo)
+    token = criar_token({"sub": str(novo.id)})
+    resp = redirect_flash("/dashboard", "success", f"Conta criada! Bem-vindo, {novo.nome.split()[0]}!")
+    resp.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax")
+    return resp
 
 
 @router.get("/auth/logout")
