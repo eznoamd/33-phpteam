@@ -31,7 +31,6 @@
       {% endif %}
     </div>
 
-    <!-- ── PRODUTOR ──────────────────────────────── -->
     {% if session_usuario.perfil == 'produtor' %}
 
       <div class="grid-2" style="margin-bottom:1.5rem;">
@@ -114,7 +113,6 @@
         {% endif %}
       </div>
 
-    <!-- ── TRANSPORTADOR ─────────────────────────── -->
     {% elif session_usuario.perfil == 'transportador' %}
 
       <div class="grid-2" style="margin-bottom:1.5rem;">
@@ -189,7 +187,6 @@
       </div>
       {% endif %}
 
-    <!-- ── COMPRADOR ─────────────────────────────── -->
     {% elif session_usuario.perfil == 'comprador' %}
 
       <div class="grid-2" style="margin-bottom:1.5rem;">

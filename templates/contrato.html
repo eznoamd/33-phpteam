@@ -31,7 +31,6 @@
       </div>
     </div>
 
-    <!-- Produto e valores -->
     <div class="card">
       <div class="card-label">Detalhes da operação</div>
       <div class="grid-3" style="gap:1rem;">
@@ -74,7 +73,6 @@
       </div>
     </div>
 
-    <!-- Partes envolvidas -->
     <div class="card">
       <div class="card-label">Partes</div>
       <div class="grid-3" style="gap:1rem;">
@@ -84,7 +82,7 @@
             <div style="font-weight:600; color:var(--white);">{{ vendedor.nome }}</div>
             <div style="font-size:0.75rem; color:var(--text-muted);">Vendedor</div>
             {% if vendedor.telefone %}
-            <div style="font-size:0.75rem; color:var(--text-soft);">📱 {{ vendedor.telefone }}</div>
+            <div style="font-size:0.75rem; color:var(--text-soft);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">smartphone</span> {{ vendedor.telefone }}</div>
             {% endif %}
           </div>
         </div>
@@ -94,7 +92,7 @@
             <div style="font-weight:600; color:var(--white);">{{ comprador.nome }}</div>
             <div style="font-size:0.75rem; color:var(--text-muted);">Comprador</div>
             {% if comprador.telefone %}
-            <div style="font-size:0.75rem; color:var(--text-soft);">📱 {{ comprador.telefone }}</div>
+            <div style="font-size:0.75rem; color:var(--text-soft);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">smartphone</span> {{ comprador.telefone }}</div>
             {% endif %}
           </div>
         </div>
@@ -105,12 +103,12 @@
               <div style="font-weight:600; color:var(--white);">{{ transportador.nome }}</div>
               <div style="font-size:0.75rem; color:var(--text-muted);">Transportador</div>
               {% if transportador.tipo_veiculo %}
-              <div style="font-size:0.75rem; color:var(--text-soft);">🚛 {{ transportador.tipo_veiculo }}</div>
+              <div style="font-size:0.75rem; color:var(--text-soft);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">local_shipping</span> {{ transportador.tipo_veiculo }}</div>
               {% endif %}
             </div>
           {% else %}
             <div style="color:var(--text-muted); font-size:0.88rem;">
-              <div style="font-size:1.5rem; margin-bottom:0.25rem;">🚛</div>
+              <div style="font-size:1.5rem; margin-bottom:0.25rem;"><span class="material-symbols-rounded" style="font-size: 1em;">local_shipping</span></div>
               Aguardando transportador
             </div>
           {% endif %}
@@ -118,11 +116,9 @@
       </div>
     </div>
 
-    <!-- Logística -->
     <div class="card">
       <div class="card-label">Status logístico</div>
 
-      <!-- Timeline -->
       <div style="display:flex; gap:0; margin-bottom:1.5rem;">
         {% set steps = [('AGUARDANDO_TRANSPORTADOR', 'Aguardando transportador'), ('EM_TRANSITO', 'Em trânsito'), ('ENTREGUE', 'Entregue')] %}
         {% set step_order = {'AGUARDANDO_TRANSPORTADOR': 0, 'EM_TRANSITO': 1, 'ENTREGUE': 2} %}
@@ -148,13 +144,12 @@
         {% endfor %}
       </div>
 
-      <!-- Ações do transportador -->
       {% if session_usuario.perfil == 'transportador' %}
         {% if contrato.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}
-        <button class="btn btn-primary" onclick="aceitarFrete()">🚛 Aceitar este frete</button>
+        <button class="btn btn-primary" onclick="aceitarFrete()"><span class="material-symbols-rounded" style="font-size: 1.2em;">local_shipping</span> Aceitar este frete</button>
         {% elif contrato.transportador_id == session_usuario.id %}
           {% if contrato.status_logistica == 'EM_TRANSITO' %}
-          <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')">✅ Marcar como entregue</button>
+          <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Marcar como entregue</button>
           {% elif contrato.status_logistica == 'ENTREGUE' %}
           <div class="badge badge-green">Entregue</div>
           {% endif %}
@@ -181,12 +176,12 @@ async function aceitarFrete() {
   div.style.display = 'block';
   if (res.ok) {
     div.className = 'flash success';
-    div.textContent = '✅ Frete aceito! Atualizando...';
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Frete aceito! Atualizando...';
     setTimeout(() => location.reload(), 1200);
   } else {
     const d = await res.json();
     div.className = 'flash error';
-    div.textContent = '❌ ' + (d.detail || 'Erro.');
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> ' + (d.detail || 'Erro.');
   }
 }
 
@@ -201,12 +196,12 @@ async function atualizarStatus(status) {
   div.style.display = 'block';
   if (res.ok) {
     div.className = 'flash success';
-    div.textContent = '✅ Status atualizado! Atualizando...';
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Status atualizado! Atualizando...';
     setTimeout(() => location.reload(), 1200);
   } else {
     const d = await res.json();
     div.className = 'flash error';
-    div.textContent = '❌ ' + (d.detail || 'Erro.');
+    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> ' + (d.detail || 'Erro.');
   }
 }
 </script>
