@@ -1,329 +1,501 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Minha Área{% endblock %}
 
 {% block content %}
 <div class="main">
 
-    <div class="page-header flex items-center justify-between">
-      <div>
-        <h1>Olá, {{ session_usuario.nome.split()[0] }}</h1>
-        <p>
-          Perfil: <strong style="color:var(--verde-light);">{{ session_usuario.perfil | capitalize }}</strong>
-          &nbsp;·&nbsp;
-          <span class="stars">★</span>
-          <strong>{{ "%.1f"|format(session_usuario.avaliacao_media) }}</strong>
-          <span style="color:var(--text-muted); font-size:0.8rem;">({{ session_usuario.total_avaliacoes }} aval.)</span>
-        </p>
+  <div class="page-header flex items-center justify-between">
+    <div>
+      <h1>Olá, {{ session_usuario.nome.split()[0] }}</h1>
+      <p>
+        Perfil: <strong style="color:var(--verde-light);">{{ session_usuario.perfil | capitalize }}</strong>
+        &nbsp;·&nbsp;
+        <span class="stars">★</span>
+        <strong>{{ "%.1f"|format(session_usuario.avaliacao_media) }}</strong>
+        <span style="color:var(--text-muted); font-size:0.8rem;">({{ session_usuario.total_avaliacoes }} aval.)</span>
+      </p>
+    </div>
+    {% if session_usuario.perfil != 'transportador' %}
+      <button class="btn btn-primary" onclick="document.getElementById('modal-oferta').style.display='flex'">
+        <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        {% if session_usuario.perfil == 'produtor' %}Publicar venda{% else %}Publicar demanda{% endif %}
+      </button>
+    {% endif %}
+  </div>
+
+  {# ── PRODUTOR / COMPRADOR ──────────────────────────────────────────────── #}
+  {% if session_usuario.perfil in ('produtor', 'comprador') %}
+
+    {# Seção 1 — Minhas ofertas #}
+    <div class="card" id="minhas-ofertas">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-label" style="margin-bottom:0;">
+          {% if session_usuario.perfil == 'produtor' %}Minhas ofertas{% else %}Minhas demandas{% endif %}
+          {% if minhas_ofertas %}
+            <span class="badge badge-gray" style="margin-left:0.5rem;">{{ minhas_ofertas|length }}</span>
+          {% endif %}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-oferta').style.display='flex'">+ Nova</button>
       </div>
-      {% if session_usuario.perfil != 'transportador' %}
-        <a href="/mercado" class="btn btn-primary">
-          <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Publicar oferta
-        </a>
+      {% if minhas_ofertas %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Qtd</th><th>Status</th><th>Publicada em</th><th></th></tr></thead>
+          <tbody>
+          {% for o in minhas_ofertas %}
+          <tr>
+            <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
+            <td>{{ o.quantidade_total|int }} {{ o.unidade_medida.split('.')[-1] if o.unidade_medida else 'sacas' }}</td>
+            <td>
+              <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% elif o.status == 'AGUARDANDO_ACEITE' %}badge-blue{% else %}badge-gray{% endif %}">
+                {{ o.status.lower().replace('_', ' ') }}
+              </span>
+            </td>
+            <td style="color:var(--text-muted);">{{ o.criado_em.strftime('%d/%m/%Y') }}</td>
+            <td><a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        <div class="empty-state-icon">
+          <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </div>
+        <p>Nenhuma oferta publicada ainda.</p>
+        <button class="btn btn-primary btn-sm" style="margin-top:0.75rem;" onclick="document.getElementById('modal-oferta').style.display='flex'">Publicar agora</button>
+      </div>
       {% endif %}
     </div>
 
-    {% if session_usuario.perfil == 'produtor' %}
-
-      <div class="grid-2" style="margin-bottom:1.5rem;">
-        <div class="card-sm">
-          <div class="card-label">Minhas ofertas</div>
-          <div class="stat-num">{{ minhas_ofertas|length }}</div>
-          <div class="stat-label">publicadas</div>
-        </div>
-        <div class="card-sm">
-          <div class="card-label">Contratos</div>
-          <div class="stat-num">{{ meus_contratos|length }}</div>
-          <div class="stat-label">fechados</div>
+    {# Seção 2 — Lances ativos (como proponente) #}
+    <div class="card" id="lances-ativos">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-label" style="margin-bottom:0;">
+          Lances em andamento
+          {% if lances_ativos %}
+            <span class="badge badge-blue" style="margin-left:0.5rem;">{{ lances_ativos|length }}</span>
+          {% endif %}
         </div>
       </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Demandas de compradores no mercado</div>
-          <a href="/mercado?tipo=QUERO_COMPRAR" class="btn btn-secondary btn-sm">Ver mercado</a>
-        </div>
-        {% if ofertas_disponiveis %}
-        <div style="display:flex; flex-direction:column; gap:0.65rem;">
-          {% for o in ofertas_disponiveis %}
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
-            <div>
-              <strong style="color:var(--white);">{{ (o.produto | string).split('.')[-1] }}</strong>
-              <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
-                {{ o.quantidade_total|int }} sacas
-                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}
+      {% if lances_ativos %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Meu lance</th><th>Status da oferta</th><th>Enviado em</th><th></th></tr></thead>
+          <tbody>
+          {% for l in lances_ativos %}
+          {% set oferta = ofertas_lance_map.get(l.oferta_id) %}
+          <tr>
+            <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(l.valor_lance_saca) }}/saca</td>
+            <td>
+              {% if oferta %}
+              <span class="badge {% if oferta.status == 'AGUARDANDO_ACEITE' %}badge-yellow{% else %}badge-blue{% endif %}">
+                {{ oferta.status.lower().replace('_', ' ') }}
               </span>
-            </div>
-            <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
-          </div>
+              {% else %}—{% endif %}
+            </td>
+            <td style="color:var(--text-muted);">{{ l.criado_em.strftime('%d/%m/%Y') }}</td>
+            <td><a href="/negociacao/{{ l.oferta_id }}" class="btn btn-ghost btn-sm">Ver negociação</a></td>
+          </tr>
           {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:1.5rem;">
-          <div class="empty-state-icon">
-            <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          </div>
-          <p>Nenhuma demanda de compra aberta no momento.</p>
-        </div>
-        {% endif %}
+          </tbody>
+        </table>
       </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Minhas ofertas recentes</div>
-          <a href="/mercado" class="btn btn-ghost btn-sm">Ver tudo</a>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        <div class="empty-state-icon">
+          <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
-        {% if minhas_ofertas %}
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Produto</th><th>Qtd (sacas)</th><th>Status</th><th>Publicada em</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for o in minhas_ofertas %}
-            <tr>
-              <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
-              <td>{{ o.quantidade_total|int }}</td>
-              <td>
-                <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% else %}badge-gray{% endif %}">
-                  {{ o.status.lower().replace('_', ' ') }}
-                </span>
-              </td>
-              <td style="color:var(--text-muted);">{{ o.criado_em.strftime('%d/%m/%Y') }}</td>
-              <td><a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:1.5rem;">
-          <div class="empty-state-icon">
-            <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          </div>
-          <p>Nenhuma oferta publicada ainda.</p>
-          <a href="/mercado" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Publicar safra</a>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if meus_contratos %}
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Meus contratos</div>
-          <a href="/meus-contratos" class="btn btn-ghost btn-sm">Ver todos</a>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Contrato</th><th>Modalidade</th><th>Valor/saca</th><th>Logística</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for c in meus_contratos %}
-            <tr>
-              <td>#{{ c.id }}</td>
-              <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
-              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
-              <td>
-                <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
-                  {{ c.status_logistica.lower().replace('_', ' ') }}
-                </span>
-              </td>
-              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <p>Você não tem lances pendentes em nenhuma oferta.</p>
       </div>
       {% endif %}
+    </div>
 
-    {% elif session_usuario.perfil == 'transportador' %}
-
-      <div class="grid-2" style="margin-bottom:1.5rem;">
-        <div class="card-sm">
-          <div class="card-label">Fretes disponíveis</div>
-          <div class="stat-num">{{ fretes_disponiveis|length }}</div>
-          <div class="stat-label">aguardando transportador</div>
-        </div>
-        <div class="card-sm">
-          <div class="card-label">Meus fretes</div>
-          <div class="stat-num">{{ meus_fretes|length }}</div>
-          <div class="stat-label">aceitos</div>
+    {# Seção 3 — Oportunidades (ofertas sem lance meu ainda) #}
+    <div class="card" id="oportunidades">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-label" style="margin-bottom:0;">
+          {% if session_usuario.perfil == 'produtor' %}Demandas de compradores{% else %}Ofertas de venda{% endif %}
+          <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">onde você ainda não deu lance</span>
+          {% if oportunidades %}
+            <span class="badge badge-gray" style="margin-left:0.5rem;">{{ oportunidades|length }}</span>
+          {% endif %}
         </div>
       </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Fretes disponíveis para aceitar</div>
-        </div>
-        {% if fretes_disponiveis %}
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Modalidade</th><th>Valor/saca</th><th>Responsável frete</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for c in fretes_disponiveis %}
-            <tr>
-              <td><strong>{{ c.modalidade_venda.replace('_', ' ') }}</strong></td>
-              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
-              <td>
-                <span class="badge {% if c.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
-                  {{ c.responsavel_frete }}
-                </span>
-              </td>
-              <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver frete</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:1.5rem;">
-          <div class="empty-state-icon">
-            <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </div>
-          <p>Nenhum frete disponível no momento.</p>
-        </div>
-        {% endif %}
+      {% if oportunidades %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Qtd</th><th>Tipo frete</th><th>Valor</th><th>Localização</th><th></th></tr></thead>
+          <tbody>
+          {% for o in oportunidades %}
+          <tr>
+            <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
+            <td>{{ o.quantidade_total|int }}</td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">
+              {{ o.tipo_frete_sugerido.replace('_', ' ') if o.tipo_frete_sugerido else '—' }}
+            </td>
+            <td>
+              {% if o.preco_unidade_inicial %}
+                <span style="color:var(--verde-light);">R$ {{ "%.2f"|format(o.preco_unidade_inicial) }}</span>
+              {% elif o.status == 'AGUARDANDO_ACEITE' and o.contra_valor_saca %}
+                <span style="color:var(--verde-light);">R$ {{ "%.2f"|format(o.contra_valor_saca) }}</span>
+                <span class="badge badge-yellow" style="font-size:0.68rem; margin-left:0.3rem;">aceite</span>
+              {% else %}
+                <span style="color:var(--text-muted);">a negociar</span>
+              {% endif %}
+            </td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">
+              {% if o.cidade_origem %}{{ o.cidade_origem }}{% if o.estado_origem %}/{{ o.estado_origem }}{% endif %}{% else %}—{% endif %}
+            </td>
+            <td><a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
-
-      {% if meus_fretes %}
-      <div class="card">
-        <div class="card-label">Meus fretes</div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Contrato</th><th>Valor/saca</th><th>Status</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for c in meus_fretes %}
-            <tr>
-              <td>#{{ c.id }}</td>
-              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
-              <td>
-                <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% else %}badge-yellow{% endif %}">
-                  {{ c.status_logistica.lower().replace('_', ' ') }}
-                </span>
-              </td>
-              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        <div class="empty-state-icon">
+          <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
+        <p>Sem oportunidades disponíveis no momento.</p>
       </div>
       {% endif %}
+    </div>
 
-    {% elif session_usuario.perfil == 'comprador' %}
+  {# ── TRANSPORTADOR ─────────────────────────────────────────────────────── #}
+  {% elif session_usuario.perfil == 'transportador' %}
 
-      <div class="grid-2" style="margin-bottom:1.5rem;">
-        <div class="card-sm">
-          <div class="card-label">Minhas demandas</div>
-          <div class="stat-num">{{ minhas_ofertas|length }}</div>
-          <div class="stat-label">publicadas</div>
-        </div>
-        <div class="card-sm">
-          <div class="card-label">Contratos</div>
-          <div class="stat-num">{{ meus_contratos|length }}</div>
-          <div class="stat-label">fechados</div>
+    {# Seção 1 — Fretes disponíveis (sem lance meu) #}
+    <div class="card" id="fretes-disponiveis">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-label" style="margin-bottom:0;">
+          Fretes disponíveis
+          <span style="color:var(--text-muted); font-size:0.78rem; font-weight:400; margin-left:0.4rem;">onde você ainda não deu lance</span>
+          {% if fretes_disponiveis %}
+            <span class="badge badge-yellow" style="margin-left:0.5rem;">{{ fretes_disponiveis|length }}</span>
+          {% endif %}
         </div>
       </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Ofertas de venda no mercado</div>
-          <a href="/mercado?tipo=QUERO_VENDER" class="btn btn-secondary btn-sm">Ver mercado</a>
-        </div>
-        {% if ofertas_disponiveis %}
-        <div style="display:flex; flex-direction:column; gap:0.65rem;">
-          {% for o in ofertas_disponiveis %}
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
-            <div>
-              <strong style="color:var(--white);">{{ (o.produto | string).split('.')[-1] }}</strong>
-              <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
-                {{ o.quantidade_total|int }} sacas
-                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}
-                · {{ o.cidade_origem }}{% if o.estado_origem %}/{{ o.estado_origem }}{% endif %}
+      {% if fretes_disponiveis %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Modalidade</th><th>Valor/saca</th><th>Resp. frete</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+          {% for c in fretes_disponiveis %}
+          {% set oferta = oferta_map.get(c.oferta_id) %}
+          <tr>
+            <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
+            <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+            <td>
+              <span class="badge {% if c.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
+                {{ c.responsavel_frete }}
               </span>
-            </div>
-            <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
-          </div>
+            </td>
+            <td>
+              <span class="badge badge-yellow">{{ c.status_logistica.lower().replace('_', ' ') }}</span>
+            </td>
+            <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver frete</a></td>
+          </tr>
           {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:1.5rem;">
-          <div class="empty-state-icon">
-            <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          </div>
-          <p>Nenhuma oferta de venda aberta no momento.</p>
-        </div>
-        {% endif %}
+          </tbody>
+        </table>
       </div>
-
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Minhas demandas publicadas</div>
-          <a href="/mercado" class="btn btn-primary btn-sm">
-            <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Nova demanda
-          </a>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        <div class="empty-state-icon">
+          <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         </div>
-        {% if minhas_ofertas %}
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Produto</th><th>Qtd (sacas)</th><th>Status</th><th>Publicada em</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for o in minhas_ofertas %}
-            <tr>
-              <td><strong>{{ (o.produto | string).split('.')[-1] }}</strong></td>
-              <td>{{ o.quantidade_total|int }}</td>
-              <td>
-                <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% elif o.status == 'EM_NEGOCIACAO' %}badge-blue{% else %}badge-gray{% endif %}">
-                  {{ o.status.lower().replace('_', ' ') }}
-                </span>
-              </td>
-              <td style="color:var(--text-muted);">{{ o.criado_em.strftime('%d/%m/%Y') }}</td>
-              <td><a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:1.5rem;">
-          <div class="empty-state-icon">
-            <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          </div>
-          <p>Você ainda não publicou demandas.</p>
-          <a href="/mercado" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Publicar demanda</a>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if meus_contratos %}
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Meus contratos</div>
-          <a href="/meus-contratos" class="btn btn-ghost btn-sm">Ver todos</a>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Contrato</th><th>Modalidade</th><th>Valor/saca</th><th>Logística</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for c in meus_contratos %}
-            <tr>
-              <td>#{{ c.id }}</td>
-              <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
-              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
-              <td>
-                <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
-                  {{ c.status_logistica.lower().replace('_', ' ') }}
-                </span>
-              </td>
-              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <p>Nenhum frete disponível sem lance seu no momento.</p>
       </div>
       {% endif %}
+    </div>
 
+    {# Seção 2 — Lances de frete ativos #}
+    <div class="card" id="lances-frete">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-label" style="margin-bottom:0;">
+          Lances de frete em andamento
+          {% if lances_frete_ativos %}
+            <span class="badge badge-blue" style="margin-left:0.5rem;">{{ lances_frete_ativos|length }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if lances_frete_ativos %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Contrato</th><th>Produto</th><th>Meu lance frete</th><th>Enviado em</th><th></th></tr></thead>
+          <tbody>
+          {% for l in lances_frete_ativos %}
+          {% set contrato = contrato_frete_map.get(l.contrato_id) %}
+          {% set oferta = oferta_map.get(contrato.oferta_id) if contrato else none %}
+          <tr>
+            <td>#{{ l.contrato_id }}</td>
+            <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+            <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(l.valor_frete_saca) }}/saca</td>
+            <td style="color:var(--text-muted);">{{ l.criado_em.strftime('%d/%m/%Y') }}</td>
+            <td><a href="/contratos/{{ l.contrato_id }}" class="btn btn-ghost btn-sm">Ver negociação</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;">
+        <div class="empty-state-icon">
+          <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p>Nenhum lance de frete pendente.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  {% endif %}
+
+  {# ── CONTRATOS (todos os perfis) ───────────────────────────────────────── #}
+  <div class="card" id="contratos">
+    <div class="flex items-center justify-between mb-2">
+      <div class="card-label" style="margin-bottom:0;">
+        Contratos
+        {% if meus_contratos %}
+          <span class="badge badge-gray" style="margin-left:0.5rem;">{{ meus_contratos|length }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if meus_contratos %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Contrato</th>
+            <th>Produto</th>
+            <th>Meu papel</th>
+            <th>Modalidade</th>
+            <th>Valor/saca</th>
+            <th>Logística</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for c in meus_contratos %}
+        {% set oferta = oferta_map.get(c.oferta_id) %}
+        <tr>
+          <td>#{{ c.id }}</td>
+          <td><strong>{{ (oferta.produto | string).split('.')[-1] if oferta else '—' }}</strong></td>
+          <td>
+            {% if c.vendedor_id == session_usuario.id %}
+              <span class="badge badge-green">Vendedor</span>
+            {% elif c.comprador_id == session_usuario.id %}
+              <span class="badge badge-blue">Comprador</span>
+            {% elif c.transportador_id == session_usuario.id %}
+              <span class="badge badge-gray">Transportador</span>
+            {% endif %}
+          </td>
+          <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
+          <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+          <td>
+            <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
+              {{ c.status_logistica.lower().replace('_', ' ') }}
+            </span>
+          </td>
+          <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:1.5rem;">
+      <div class="empty-state-icon">
+        <svg class="icon-xl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <p>Nenhum contrato fechado ainda.</p>
+    </div>
     {% endif %}
+  </div>
 
 </div>
+
+{% if session_usuario and session_usuario.perfil != 'transportador' %}
+<div id="modal-oferta" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="max-width:520px; width:100%; margin:0; max-height:90vh; overflow-y:auto;">
+    <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
+      <h2 style="font-family:var(--font-display); color:var(--white);">
+        {% if session_usuario.perfil == 'produtor' %}<span class="material-symbols-rounded" style="font-size:1.1em; vertical-align:bottom;">agriculture</span> Publicar venda{% else %}<span class="material-symbols-rounded" style="font-size:1.1em; vertical-align:bottom;">package</span> Publicar demanda{% endif %}
+      </h2>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-oferta').style.display='none'">✕</button>
+    </div>
+    <form id="form-oferta">
+      <div class="form-group">
+        <label>Produto</label>
+        <input type="text" list="lista-produtos" id="o_produto" placeholder="Digite ou selecione..." required autocomplete="off" />
+        <datalist id="lista-produtos">
+          <option value="SOJA">Soja</option>
+          <option value="MILHO">Milho</option>
+          <option value="TRIGO">Trigo</option>
+          <option value="ARROZ">Arroz</option>
+          <option value="ALGODAO">Algodão</option>
+          <option value="SORGO">Sorgo</option>
+        </datalist>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Quantidade Total</label>
+          <input type="number" id="o_qtd" placeholder="Ex: 500" min="1" required />
+        </div>
+        <div class="form-group">
+          <label>Unidade de Medida</label>
+          <select id="o_unidade" required>
+            <option value="">Selecione...</option>
+            <option value="SACAS">Sacas (60kg)</option>
+            <option value="KG">KG</option>
+            <option value="TONELADAS">Toneladas</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Modalidade de Frete</label>
+        <select id="o_frete" required>
+          <option value="">Selecione...</option>
+          <option value="A_COMBINAR">A Combinar</option>
+          <option value="FOB_FAZENDA">FOB Fazenda</option>
+          <option value="CIF">CIF (Frete por conta do vendedor)</option>
+          <option value="POSTO_INDUSTRIA">Posto Indústria</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="o_valor" placeholder="Opcional" min="0" step="0.01" />
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="o_estado" required onchange="carregarCidades()"><option value="">Selecione...</option></select>
+        </div>
+        <div class="form-group">
+          <label>Cidade</label>
+          <select id="o_cidade" required disabled><option value="">Selecione o Estado primeiro...</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data limite</label>
+        <input type="date" id="o_data" required />
+      </div>
+      <div id="msg-oferta" style="display:none; margin-bottom:1rem;"></div>
+      <div class="flex gap-2" style="justify-content:flex-end;">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="criarOferta()">Publicar oferta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PERFIL = "{{ session_usuario.perfil if session_usuario else '' }}";
+
+function fecharModal() {
+  document.getElementById('modal-oferta').style.display = 'none';
+  document.getElementById('msg-oferta').style.display = 'none';
+}
+
+function mostrarErro(msg) {
+  const div = document.getElementById('msg-oferta');
+  div.style.display = 'block';
+  div.style.padding = '0.75rem';
+  div.style.borderRadius = '6px';
+  div.style.border = '1px solid #ff4a4a';
+  div.style.backgroundColor = 'rgba(255, 74, 74, 0.1)';
+  div.style.color = '#ff4a4a';
+  div.innerText = msg;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const dataInput = document.getElementById('o_data');
+  if (!dataInput) return;
+  const hoje = new Date();
+  const umAnoDepois = new Date();
+  umAnoDepois.setFullYear(hoje.getFullYear() + 1);
+  dataInput.min = hoje.toISOString().split('T')[0];
+  dataInput.max = umAnoDepois.toISOString().split('T')[0];
+
+  const res = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+  const estados = await res.json();
+  const selectEstado = document.getElementById('o_estado');
+  estados.forEach(uf => {
+    const option = document.createElement('option');
+    option.value = uf.sigla;
+    option.textContent = uf.nome;
+    selectEstado.appendChild(option);
+  });
+});
+
+async function carregarCidades() {
+  const uf = document.getElementById('o_estado').value;
+  const selectCidade = document.getElementById('o_cidade');
+  selectCidade.innerHTML = '<option value="">Carregando...</option>';
+  selectCidade.disabled = true;
+  const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`);
+  const cidades = await res.json();
+  selectCidade.innerHTML = '<option value="">Selecione a Cidade...</option>';
+  cidades.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c.nome;
+    option.textContent = c.nome;
+    selectCidade.appendChild(option);
+  });
+  selectCidade.disabled = false;
+}
+
+async function criarOferta() {
+  const produto = document.getElementById('o_produto').value.trim();
+  const qtd = document.getElementById('o_qtd').value;
+  const unidade = document.getElementById('o_unidade').value;
+  const frete = document.getElementById('o_frete').value;
+  const valorRaw = document.getElementById('o_valor').value.trim();
+  const estado = document.getElementById('o_estado').value;
+  const cidade = document.getElementById('o_cidade').value;
+  const data = document.getElementById('o_data').value;
+
+  if (!produto || !qtd || !unidade || !frete || !estado || !cidade || !data) {
+    return mostrarErro("Por favor, preencha todos os campos obrigatórios.");
+  }
+
+  const hoje = new Date().toISOString().split('T')[0];
+  const umAnoDepois = new Date();
+  umAnoDepois.setFullYear(umAnoDepois.getFullYear() + 1);
+  if (data < hoje || data > umAnoDepois.toISOString().split('T')[0]) {
+    return mostrarErro("A data deve estar entre hoje e no máximo 1 ano.");
+  }
+
+  const body = {
+    tipo_demanda: PERFIL === 'produtor' ? 'QUERO_VENDER' : 'QUERO_COMPRAR',
+    produto: produto.toUpperCase(),
+    quantidade_total: parseFloat(qtd),
+    unidade_medida: unidade,
+    tipo_frete_sugerido: frete,
+    preco_unidade_inicial: valorRaw ? parseFloat(valorRaw) : null,
+    data_limite_envio: data,
+    estado_origem: estado,
+    cidade_origem: cidade
+  };
+
+  const res = await fetch('/ofertas/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  if (res.ok) {
+    location.reload();
+  } else {
+    mostrarErro("Erro ao publicar oferta. Verifique os dados preenchidos.");
+  }
+}
+</script>
 {% endblock %}

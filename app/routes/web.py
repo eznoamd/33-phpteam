@@ -3,12 +3,13 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import config
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.models.negociacao import OfertaMercado, ContratoTransporte
+from app.models.negociacao import OfertaMercado, ContratoTransporte, NegociacaoLance, LanceFrete
 from app.seguranca import criar_token, hash_senha, verificar_senha
 
 router = APIRouter(tags=["Frontend"])
@@ -178,61 +179,127 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if not usuario:
         return redirect_flash("/login", "info", "Faça login para acessar.")
 
-    ctx = {}
+    # Contratos unificados: usuário aparece em qualquer papel
+    meus_contratos = (
+        db.query(ContratoTransporte)
+        .filter(
+            or_(
+                ContratoTransporte.vendedor_id == usuario.id,
+                ContratoTransporte.comprador_id == usuario.id,
+                ContratoTransporte.transportador_id == usuario.id,
+            )
+        )
+        .order_by(ContratoTransporte.id.desc())
+        .all()
+    )
+    oferta_ids_contratos = {c.oferta_id for c in meus_contratos}
+    oferta_map = {
+        o.id: o
+        for o in db.query(OfertaMercado).filter(OfertaMercado.id.in_(oferta_ids_contratos)).all()
+    }
 
-    if usuario.perfil == "produtor":
-        minhas_ofertas = db.query(OfertaMercado).filter(
-            OfertaMercado.autor_id == usuario.id
-        ).order_by(OfertaMercado.id.desc()).limit(10).all()
-        
-        meus_contratos = db.query(ContratoTransporte).filter(
-            ContratoTransporte.vendedor_id == usuario.id
-        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
-        
-        ofertas_disponiveis = db.query(OfertaMercado).filter(
-            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
-            OfertaMercado.autor_id != usuario.id,
-            OfertaMercado.tipo_demanda == "QUERO_COMPRAR",
-        ).order_by(OfertaMercado.id.desc()).limit(5).all()
-        
-        ctx = {
-            "minhas_ofertas": minhas_ofertas,
-            "meus_contratos": meus_contratos,
-            "ofertas_disponiveis": ofertas_disponiveis,
+    ctx: dict = {"meus_contratos": meus_contratos, "oferta_map": oferta_map}
+
+    if usuario.perfil in ("produtor", "comprador"):
+        # Seção 1: minhas ofertas publicadas
+        minhas_ofertas = (
+            db.query(OfertaMercado)
+            .filter(OfertaMercado.autor_id == usuario.id)
+            .order_by(OfertaMercado.id.desc())
+            .all()
+        )
+
+        # Seção 2: lances que dei ainda pendentes
+        lances_ativos = (
+            db.query(NegociacaoLance)
+            .filter(
+                NegociacaoLance.proponente_id == usuario.id,
+                NegociacaoLance.status_lance.in_(["PENDENTE", "CONTRAPROPOSTA"]),
+            )
+            .order_by(NegociacaoLance.id.desc())
+            .all()
+        )
+        oferta_ids_lance = {l.oferta_id for l in lances_ativos}
+        ofertas_lance_map = {
+            o.id: o
+            for o in db.query(OfertaMercado).filter(OfertaMercado.id.in_(oferta_ids_lance)).all()
         }
 
-    elif usuario.perfil == "comprador":
-        minhas_ofertas = db.query(OfertaMercado).filter(
-            OfertaMercado.autor_id == usuario.id
-        ).order_by(OfertaMercado.id.desc()).limit(10).all()
-        
-        meus_contratos = db.query(ContratoTransporte).filter(
-            ContratoTransporte.comprador_id == usuario.id
-        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
-        
-        ofertas_disponiveis = db.query(OfertaMercado).filter(
-            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
-            OfertaMercado.autor_id != usuario.id,
-            OfertaMercado.tipo_demanda == "QUERO_VENDER",
-        ).order_by(OfertaMercado.id.desc()).limit(5).all()
-        
-        ctx = {
-            "minhas_ofertas": minhas_ofertas,
-            "meus_contratos": meus_contratos,
-            "ofertas_disponiveis": ofertas_disponiveis,
-        }
+        # Seção 3: oportunidades onde ainda não dei nenhum lance
+        tipo_alvo = "QUERO_COMPRAR" if usuario.perfil == "produtor" else "QUERO_VENDER"
+        todos_meus_lances = db.query(NegociacaoLance).filter(
+            NegociacaoLance.proponente_id == usuario.id
+        ).all()
+        excluir_oferta_ids = {l.oferta_id for l in todos_meus_lances}
+        oportunidades = (
+            db.query(OfertaMercado)
+            .filter(
+                OfertaMercado.autor_id != usuario.id,
+                OfertaMercado.tipo_demanda == tipo_alvo,
+                OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
+                ~OfertaMercado.id.in_(excluir_oferta_ids),
+            )
+            .order_by(OfertaMercado.id.desc())
+            .limit(20)
+            .all()
+        )
 
-    # Mantendo o transportador mapeado para evitar quebras no render
+        ctx.update({
+            "minhas_ofertas": minhas_ofertas,
+            "lances_ativos": lances_ativos,
+            "ofertas_lance_map": ofertas_lance_map,
+            "oportunidades": oportunidades,
+        })
+
     elif usuario.perfil == "transportador":
-        fretes_disponiveis = db.query(ContratoTransporte).filter(
-            ContratoTransporte.status_logistica.in_([
-                "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
-            ])
-        ).order_by(ContratoTransporte.id.desc()).limit(10).all()
-        meus_fretes = db.query(ContratoTransporte).filter(
-            ContratoTransporte.transportador_id == usuario.id
-        ).order_by(ContratoTransporte.id.desc()).limit(10).all()
-        ctx = {"fretes_disponiveis": fretes_disponiveis, "meus_fretes": meus_fretes}
+        # Seção 2: lances de frete que dei e ainda estão pendentes
+        lances_frete_ativos = (
+            db.query(LanceFrete)
+            .filter(LanceFrete.proponente_id == usuario.id, LanceFrete.status == "PENDENTE")
+            .order_by(LanceFrete.id.desc())
+            .all()
+        )
+        contrato_ids_lance = {l.contrato_id for l in lances_frete_ativos}
+        contrato_frete_map = {
+            c.id: c
+            for c in db.query(ContratoTransporte)
+            .filter(ContratoTransporte.id.in_(contrato_ids_lance))
+            .all()
+        }
+        # garante que as ofertas dos contratos de frete também entram no oferta_map
+        for c in contrato_frete_map.values():
+            if c.oferta_id not in oferta_map:
+                o = db.query(OfertaMercado).filter(OfertaMercado.id == c.oferta_id).first()
+                if o:
+                    oferta_map[o.id] = o
+
+        # Seção 1: fretes disponíveis onde ainda não dei lance
+        todos_meus_lances_frete = db.query(LanceFrete).filter(
+            LanceFrete.proponente_id == usuario.id
+        ).all()
+        excluir_contrato_ids = {l.contrato_id for l in todos_meus_lances_frete}
+        fretes_disponiveis = (
+            db.query(ContratoTransporte)
+            .filter(
+                ContratoTransporte.status_logistica.in_([
+                    "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
+                ]),
+                ~ContratoTransporte.id.in_(excluir_contrato_ids),
+            )
+            .order_by(ContratoTransporte.id.desc())
+            .all()
+        )
+        for c in fretes_disponiveis:
+            if c.oferta_id not in oferta_map:
+                o = db.query(OfertaMercado).filter(OfertaMercado.id == c.oferta_id).first()
+                if o:
+                    oferta_map[o.id] = o
+
+        ctx.update({
+            "fretes_disponiveis": fretes_disponiveis,
+            "lances_frete_ativos": lances_frete_ativos,
+            "contrato_frete_map": contrato_frete_map,
+        })
 
     return render("dashboard.html", request, db, **ctx)
 
@@ -245,26 +312,6 @@ def perfil_page(request: Request, db: Session = Depends(get_db)):
     return render("perfil.html", request, db)
 
 
-# ── Marketplace ───────────────────────────────────────────────────────────────
-
-@router.get("/mercado", response_class=HTMLResponse)
-def mercado_page(
-    request: Request,
-    produto: str = "",
-    tipo: str = "",
-    db: Session = Depends(get_db),
-):
-    q = db.query(OfertaMercado).filter(
-        OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"])
-    )
-    if produto:
-        q = q.filter(OfertaMercado.produto.ilike(f"%{produto}%"))
-    if tipo:
-        q = q.filter(OfertaMercado.tipo_demanda == tipo.upper())
-    ofertas = q.order_by(OfertaMercado.id.desc()).limit(50).all()
-    return render("mercado.html", request, db, ofertas=ofertas, filtro_produto=produto, filtro_tipo=tipo)
-
-
 @router.get("/negociacao/{oferta_id}", response_class=HTMLResponse)
 def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_db)):
     usuario = get_session_usuario(request, db)
@@ -273,7 +320,7 @@ def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_
 
     oferta = db.query(OfertaMercado).filter(OfertaMercado.id == oferta_id).first()
     if not oferta:
-        return redirect_flash("/mercado", "error", "Oferta não encontrada.")
+        return redirect_flash("/dashboard", "error", "Oferta não encontrada.")
 
     lances = (
         db.query(NegociacaoLance)
@@ -400,7 +447,7 @@ def contrato_page(contrato_id: int, request: Request, db: Session = Depends(get_
 
     contrato = db.query(ContratoTransporte).filter(ContratoTransporte.id == contrato_id).first()
     if not contrato:
-        return redirect_flash("/mercado", "error", "Contrato não encontrado.")
+        return redirect_flash("/dashboard", "error", "Contrato não encontrado.")
 
     partes = {contrato.vendedor_id, contrato.comprador_id, contrato.transportador_id}
     if usuario.id not in partes and usuario.perfil != "transportador":

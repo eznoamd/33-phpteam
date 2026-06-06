@@ -38,10 +38,8 @@
       <a href="/catalogo?tipo=produtor"  class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'produtor' %}active{% endif %}">Produtores</a>
       <a href="/catalogo?tipo=comprador" class="nav-link {% if request.url.path == '/catalogo' and request.query_params.get('tipo') == 'comprador' %}active{% endif %}">Compradores</a>
     {% endif %}
-    <a href="/mercado"  class="nav-link {% if request.url.path == '/mercado' %}active{% endif %}">Mercado</a>
     {% if session_usuario %}
-      <a href="/dashboard"      class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
-      <a href="/meus-contratos" class="nav-link {% if request.url.path == '/meus-contratos' %}active{% endif %}">Contratos</a>
+      <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Minha Área</a>
     {% endif %}
   </div>
 
