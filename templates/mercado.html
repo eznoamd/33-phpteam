@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Mercado{% endblock %}
+
+{% block layout %}
+<div class="layout-sidebar">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/mercado"   class="sidebar-link active"><span class="icon">🌾</span> Mercado</a>
+    </div>
+    {% if session_usuario %}
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/perfil"      class="sidebar-link"><span class="icon">👤</span> Perfil</a>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+    </div>
+    {% endif %}
+  </aside>
+
+  <main class="main">
+    {% for msg in flash_messages %}
+      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    {% endfor %}
+
+    <div class="page-header flex items-center justify-between">
+      <div>
+        <h1>🌾 Mercado</h1>
+        <p>Compre e venda safra diretamente — preços blindados por IA.</p>
+      </div>
+      {% if session_usuario and session_usuario.perfil != 'transportador' %}
+      <button class="btn btn-primary" onclick="document.getElementById('modal-oferta').style.display='flex'">
+        + Publicar oferta
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- Filtros -->
+    <form method="get" action="/mercado" class="card" style="padding:1rem 1.25rem; margin-bottom:1.25rem;">
+      <div class="flex gap-2" style="align-items:flex-end; flex-wrap:wrap;">
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:160px;">
+          <label style="font-size:0.78rem;">Produto</label>
+          <input type="text" name="produto" value="{{ filtro_produto }}" placeholder="Soja, Milho, Trigo..." />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:0.78rem;">Tipo</label>
+          <select name="tipo">
+            <option value="">Todos</option>
+            <option value="QUERO_VENDER" {% if filtro_tipo == 'QUERO_VENDER' %}selected{% endif %}>Vender</option>
+            <option value="QUERO_COMPRAR" {% if filtro_tipo == 'QUERO_COMPRAR' %}selected{% endif %}>Comprar</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-secondary btn-sm" style="margin-bottom:0;">Filtrar</button>
+        {% if filtro_produto or filtro_tipo %}
+        <a href="/mercado" class="btn btn-ghost btn-sm" style="margin-bottom:0;">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if ofertas %}
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      {% for o in ofertas %}
+      <div class="card" style="margin-bottom:0;">
+        <div class="flex items-center justify-between" style="margin-bottom:0.85rem;">
+          <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+            <strong style="color:var(--white); font-family:var(--font-display); font-size:1.05rem;">{{ o.produto }}</strong>
+            <span class="badge {% if o.tipo_demanda == 'QUERO_VENDER' %}badge-green{% else %}badge-blue{% endif %}">
+              {% if o.tipo_demanda == 'QUERO_VENDER' %}Vende{% else %}Compra{% endif %}
+            </span>
+            <span class="badge {% if o.status == 'ABERTA' %}badge-yellow{% else %}badge-gray{% endif %}">
+              {{ o.status.lower().replace('_', ' ') }}
+            </span>
+            {% if o.ia_preco_minimo and o.ia_preco_maximo %}
+            <span class="badge badge-gray" style="font-size:0.68rem;">
+              IA: R$ {{ "%.0f"|format(o.ia_preco_minimo) }}–{{ "%.0f"|format(o.ia_preco_maximo) }}/saca
+            </span>
+            {% endif %}
+          </div>
+          {% if session_usuario and o.autor_id != session_usuario.id %}
+          <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
+          {% elif session_usuario and o.autor_id == session_usuario.id %}
+          <a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a>
+          {% else %}
+          <a href="/login" class="btn btn-primary btn-sm">Entrar para negociar</a>
+          {% endif %}
+        </div>
+        <div class="grid-3" style="gap:0.75rem;">
+          <div>
+            <div class="stat-label">Quantidade</div>
+            <div style="color:var(--text); font-weight:600;">{{ o.quantidade_total|int }} sacas</div>
+          </div>
+          <div>
+            <div class="stat-label">Preço inicial</div>
+            <div style="color:var(--verde-light); font-weight:700;">
+              {% if o.preco_saca_inicial %}R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca
+              {% else %}<span style="color:var(--text-muted);">A combinar</span>{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="stat-label">Envio até</div>
+            <div style="color:var(--text);">{{ o.data_limite_envio.strftime('%d/%m/%Y') }}</div>
+          </div>
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);">
+          📍 {{ o.cidade_origem }}{% if o.estado_origem %}/{{ o.estado_origem }}{% endif %}
+          &nbsp;·&nbsp; Publicada em {{ o.criado_em.strftime('%d/%m/%Y') }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card empty-state">
+      <div class="empty-state-icon">🌾</div>
+      <h3>Nenhuma oferta no mercado</h3>
+      <p>Seja o primeiro a publicar!</p>
+      {% if session_usuario and session_usuario.perfil != 'transportador' %}
+      <button class="btn btn-primary" style="margin-top:1rem;"
+              onclick="document.getElementById('modal-oferta').style.display='flex'">
+        + Publicar oferta
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </main>
+</div>
+
+<!-- Modal criar oferta -->
+{% if session_usuario and session_usuario.perfil != 'transportador' %}
+<div id="modal-oferta" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="max-width:520px; width:100%; margin:0; max-height:90vh; overflow-y:auto;">
+    <div class="flex items-center justify-between" style="margin-bottom:1.25rem;">
+      <h2 style="font-family:var(--font-display); color:var(--white);">
+        {% if session_usuario.perfil == 'produtor' %}🌾 Publicar venda{% else %}📦 Publicar demanda{% endif %}
+      </h2>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-oferta').style.display='none'">✕</button>
+    </div>
+    <form id="form-oferta">
+      <div class="form-group">
+        <label>Produto</label>
+        <input type="text" id="o_produto" placeholder="Ex: Soja, Milho, Trigo..." required />
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Quantidade (sacas 60 kg)</label>
+          <input type="number" id="o_qtd" placeholder="Ex: 500" min="1" required />
+        </div>
+        <div class="form-group">
+          <label>Preço inicial/saca (opcional)</label>
+          <input type="number" id="o_preco" placeholder="R$ — a combinar" min="0.01" step="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data limite de envio</label>
+        <input type="date" id="o_data" required />
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Cidade de origem</label>
+          <input type="text" id="o_cidade" placeholder="Ex: Rondonópolis" required />
+        </div>
+        <div class="form-group">
+          <label>Estado (UF)</label>
+          <input type="text" id="o_estado" placeholder="Ex: MT" maxlength="2" style="text-transform:uppercase;" />
+        </div>
+      </div>
+      <div id="ia-badge" style="display:none;" class="badge badge-gray" style="margin-bottom:0.75rem; font-size:0.8rem; display:inline-block;"></div>
+      <div class="flex gap-2" style="justify-content:flex-end; margin-top:0.5rem;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-oferta').style.display='none'">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-publicar" onclick="criarOferta()">Publicar oferta</button>
+      </div>
+      <div id="msg-oferta" style="margin-top:0.75rem; display:none;"></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PERFIL = "{{ session_usuario.perfil if session_usuario else '' }}";
+
+function getCookie(name) {
+  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
+}
+
+async function criarOferta() {
+  const token = getCookie('agrohub_session');
+  const btn = document.getElementById('btn-publicar');
+  btn.disabled = true;
+  btn.textContent = 'Publicando...';
+
+  const tipo = PERFIL === 'produtor' ? 'QUERO_VENDER' : 'QUERO_COMPRAR';
+  const precoVal = document.getElementById('o_preco').value;
+  const body = {
+    tipo_demanda: tipo,
+    produto: document.getElementById('o_produto').value,
+    quantidade_total: parseFloat(document.getElementById('o_qtd').value),
+    preco_saca_inicial: precoVal ? parseFloat(precoVal) : null,
+    data_limite_envio: document.getElementById('o_data').value,
+    cidade_origem: document.getElementById('o_cidade').value,
+    estado_origem: document.getElementById('o_estado').value.toUpperCase() || null,
+  };
+
+  const div = document.getElementById('msg-oferta');
+  div.style.display = 'block';
+
+  const res = await fetch('/ofertas/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify(body),
+  });
+
+  if (res.ok) {
+    const d = await res.json();
+    div.className = 'flash success';
+    div.innerHTML = `✅ Oferta publicada! IA definiu guardrails: R$ ${d.ia_preco_minimo?.toFixed(2) ?? '–'}–${d.ia_preco_maximo?.toFixed(2) ?? '–'}/saca. Redirecionando...`;
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    const d = await res.json();
+    div.className = 'flash error';
+    div.textContent = '❌ ' + (d.detail || 'Erro ao publicar oferta.');
+    btn.disabled = false;
+    btn.textContent = 'Publicar oferta';
+  }
+}
+</script>
+{% endblock %}

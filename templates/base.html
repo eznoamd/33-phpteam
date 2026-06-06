@@ -20,14 +20,9 @@
 
   <div class="nav-links">
     <a href="/catalogo" class="nav-link {% if request.url.path == '/catalogo' %}active{% endif %}">Produtores</a>
+    <a href="/mercado"  class="nav-link {% if request.url.path == '/mercado' %}active{% endif %}">Mercado</a>
     {% if session_usuario %}
-      <a href="/dashboard"  class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
-      {% if session_usuario.perfil == 'produtor' or session_usuario.perfil == 'comprador' %}
-        <a href="/demandas"   class="nav-link {% if request.url.path == '/demandas' %}active{% endif %}">Demandas</a>
-      {% endif %}
-      {% if session_usuario.perfil == 'transportador' %}
-        <a href="/viagens"    class="nav-link {% if request.url.path == '/viagens' %}active{% endif %}">Viagens</a>
-      {% endif %}
+      <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
     {% endif %}
   </div>
 

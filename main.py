@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.database import criar_tabelas
-from app.routes import auth, usuarios, demandas, viagens, mensagens, catalogo, web
+from app.routes import auth, usuarios, demandas, viagens, mensagens, catalogo, web, negociacao
 
 app = FastAPI(
     title="AgroHub API",
@@ -28,6 +28,7 @@ app.include_router(demandas.router)
 app.include_router(viagens.router)
 app.include_router(mensagens.router)
 app.include_router(catalogo.router)
+app.include_router(negociacao.router)
 
 # Static
 app.mount("/static", StaticFiles(directory="templates/static"), name="static")
