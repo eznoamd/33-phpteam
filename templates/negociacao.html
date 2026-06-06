@@ -252,8 +252,11 @@ const MY_ID = {{ session_usuario.id }};
 const SINCE_ID = {{ since_id }};
 const OFERTA_STATUS = "{{ oferta.status }}";
 
-function getCookie(name) {
-  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
+function formatarErro(detail) {
+  if (!detail) return 'Erro.';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(e => e.msg || JSON.stringify(e)).join(' · ');
+  return JSON.stringify(detail);
 }
 
 function badgeClass(status) {
@@ -415,7 +418,8 @@ async function enviarLance() {
 
   const res = await fetch(`/ofertas/${OFERTA_ID}/lances`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify({valor_lance_saca: valor, modalidade_venda: modalidade}),
   });
 
@@ -423,13 +427,12 @@ async function enviarLance() {
     document.getElementById('valor_lance').value = '';
     document.getElementById('modalidade_venda').value = '';
     div.style.display = 'none';
-    // O SSE trará o novo bubble automaticamente
     document.getElementById('form-lance').style.display = 'none';
   } else {
     const d = await res.json();
     div.style.display = 'block';
     div.className = 'flash error';
-    div.textContent = '❌ ' + (d.detail || 'Erro ao enviar lance.');
+    div.textContent = '❌ ' + formatarErro(d.detail);
   }
 }
 
@@ -438,7 +441,8 @@ async function responderLance(lanceId, acao) {
   const token = getCookie('agrohub_session');
   const res = await fetch(`/ofertas/${OFERTA_ID}/lances/${lanceId}/responder`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify({acao}),
   });
 

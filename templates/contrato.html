@@ -181,15 +181,10 @@
 <script>
 const CONTRATO_ID = {{ contrato.id }};
 
-function getCookie(name) {
-  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
-}
-
 async function aceitarFrete() {
-  const token = getCookie('agrohub_session');
   const res = await fetch(`/contratos/${CONTRATO_ID}/aceitar-frete`, {
     method: 'POST',
-    headers: {'Authorization': 'Bearer ' + token},
+    credentials: 'same-origin',
   });
   const div = document.getElementById('msg-logistica');
   div.style.display = 'block';
@@ -205,10 +200,10 @@ async function aceitarFrete() {
 }
 
 async function atualizarStatus(status) {
-  const token = getCookie('agrohub_session');
   const res = await fetch(`/contratos/${CONTRATO_ID}/status`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
     body: JSON.stringify({status}),
   });
   const div = document.getElementById('msg-logistica');
