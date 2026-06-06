@@ -70,8 +70,7 @@
               <strong style="color:var(--white);">{{ o.produto }}</strong>
               <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
                 {{ o.quantidade_total|int }} sacas
-                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) %}}/saca{% endif %}
-              </span>
+                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}              </span>
             </div>
             <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
           </div>
