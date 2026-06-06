@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.database import criar_tabelas
+from app.database import criar_tabelas, migrar_banco
 from app.routes import auth, usuarios, demandas, viagens, mensagens, catalogo, web, negociacao
 
 app = FastAPI(
@@ -37,6 +37,7 @@ app.mount("/static", StaticFiles(directory="templates/static"), name="static")
 @app.on_event("startup")
 def startup():
     criar_tabelas()
+    migrar_banco()
 
 
 @app.get("/health", tags=["Status"])

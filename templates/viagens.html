@@ -1,17 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Viagens{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='viagens' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
+{% block content %}
 
-  <main class="main">
+  <div class="main">
     {% for msg in flash_messages %}
       <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
     {% endfor %}
-
     <div class="page-header">
       <h1><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">local_shipping</span> Viagens disponíveis</h1>
       <p>Cargas aguardando transportador.</p>
@@ -61,7 +56,6 @@
       <p>Aguarde produtores criarem novas viagens.</p>
     </div>
     {% endif %}
-  </main>
 </div>
 
 <div id="modal-aceitar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding:1rem;">

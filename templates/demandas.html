@@ -1,17 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Demandas{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='demandas' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
+{% block content %}
 
-  <main class="main">
+  <div class="main">
     {% for msg in flash_messages %}
       <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
     {% endfor %}
-
     <div class="page-header flex items-center justify-between">
       <div>
         <h1 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">assignment</span> Demandas</h1>
@@ -79,7 +74,6 @@
     </div>
     {% endif %}
 
-  </main>
 </div>
 
 {% if session_usuario.perfil == 'comprador' %}

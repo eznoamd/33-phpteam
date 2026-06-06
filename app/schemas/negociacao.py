@@ -35,6 +35,8 @@ class OfertaResposta(BaseModel):
     estado_destino: Optional[str] # Adicionado
     ia_preco_minimo: Optional[float]
     ia_preco_maximo: Optional[float]
+    contra_valor_saca: Optional[float]
+    contra_modalidade_venda: Optional[str]
     status: str
     criado_em: datetime
 
@@ -72,9 +74,31 @@ class ContratoResposta(BaseModel):
     responsavel_frete: str
     modalidade_venda: str
     valor_saca_final: float
+    valor_frete_saca_final: Optional[float]
+    contra_valor_frete: Optional[float]
     status_logistica: str
     criado_em: datetime
 
 
 class ContratoStatusUpdate(BaseModel):
     status: str  # EM_TRANSITO | ENTREGUE
+
+
+class LanceFreteCriar(BaseModel):
+    valor_frete_saca: float
+
+
+class LanceFreteResposta(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    contrato_id: int
+    proponente_id: int
+    valor_frete_saca: float
+    status: str
+    criado_em: datetime
+    atualizado_em: datetime
+
+
+class LanceFreteResponder(BaseModel):
+    acao: str  # ACEITAR | RECUSAR

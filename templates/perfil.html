@@ -1,17 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Meu Perfil{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='perfil' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
+{% block content %}
 
-  <main class="main">
+  <div class="main">
     {% for msg in flash_messages %}
       <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
     {% endfor %}
-
     <div class="page-header">
       <h1>Meu Perfil</h1>
       <p>Gerencie suas informações pessoais e dados da conta.</p>
@@ -102,6 +97,5 @@
         </p>
       </div>
     </div>
-  </main>
 </div>
 {% endblock %}

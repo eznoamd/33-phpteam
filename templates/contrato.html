@@ -1,27 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Contrato #{{ contrato.id }}{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='contratos' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
-
-  <main class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
+{% block content %}
+<div class="main">
 
     <div class="page-header flex items-center justify-between">
       <div>
         <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.3rem;">
-          <a href="/mercado" style="color:var(--text-muted); font-size:0.85rem;">← Mercado</a>
+          <a href="/meus-contratos" style="color:var(--text-muted); font-size:0.85rem;">← Contratos</a>
           <span style="color:var(--border);">/</span>
           <h1 style="margin:0;">Contrato #{{ contrato.id }}</h1>
           <span class="badge
             {% if contrato.status_logistica == 'ENTREGUE' %}badge-green
             {% elif contrato.status_logistica == 'EM_TRANSITO' %}badge-blue
-            {% else %}badge-yellow{% endif %}">
+            {% elif contrato.status_logistica == 'EM_NEGOCIACAO_FRETE' %}badge-yellow
+            {% else %}badge-gray{% endif %}" id="badge-status">
             {{ contrato.status_logistica.lower().replace('_', ' ') }}
           </span>
         </div>
@@ -47,7 +40,7 @@
           </div>
         </div>
         <div>
-          <div class="stat-label">Valor fechado</div>
+          <div class="stat-label">Valor da mercadoria</div>
           <div style="font-weight:700; color:var(--verde-light); font-size:1.1rem;">
             R$ {{ "%.2f"|format(contrato.valor_saca_final) }}/saca
           </div>
@@ -60,8 +53,18 @@
           <div class="stat-label">Responsável pelo frete</div>
           <div>
             <span class="badge {% if contrato.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
-              {{ contrato.responsavel_frete }}
+              {{ 'PRODUTOR' if contrato.responsavel_frete == 'VENDEDOR' else 'COMPRADOR' }}
             </span>
+          </div>
+        </div>
+        <div>
+          <div class="stat-label">Valor do frete</div>
+          <div id="valor-frete-display" style="font-weight:700; color:var(--verde-light); font-size:1.1rem;">
+            {% if contrato.valor_frete_saca_final %}
+              R$ {{ "%.2f"|format(contrato.valor_frete_saca_final) }}/saca
+            {% else %}
+              <span style="color:var(--text-muted); font-weight:400; font-size:0.88rem;">A negociar</span>
+            {% endif %}
           </div>
         </div>
         <div>
@@ -80,7 +83,7 @@
           <div class="avatar">{{ vendedor.nome[0].upper() }}</div>
           <div>
             <div style="font-weight:600; color:var(--white);">{{ vendedor.nome }}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">Vendedor</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Produtor</div>
             {% if vendedor.telefone %}
             <div style="font-size:0.75rem; color:var(--text-soft);"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">smartphone</span> {{ vendedor.telefone }}</div>
             {% endif %}
@@ -118,10 +121,14 @@
 
     <div class="card">
       <div class="card-label">Status logístico</div>
-
       <div style="display:flex; gap:0; margin-bottom:1.5rem;">
-        {% set steps = [('AGUARDANDO_TRANSPORTADOR', 'Aguardando transportador'), ('EM_TRANSITO', 'Em trânsito'), ('ENTREGUE', 'Entregue')] %}
-        {% set step_order = {'AGUARDANDO_TRANSPORTADOR': 0, 'EM_TRANSITO': 1, 'ENTREGUE': 2} %}
+        {% set steps = [
+          ('AGUARDANDO_TRANSPORTADOR', 'Aguardando transportador'),
+          ('EM_NEGOCIACAO_FRETE', 'Negociando frete'),
+          ('EM_TRANSITO', 'Em trânsito'),
+          ('ENTREGUE', 'Entregue')
+        ] %}
+        {% set step_order = {'AGUARDANDO_TRANSPORTADOR': 0, 'EM_NEGOCIACAO_FRETE': 1, 'EM_TRANSITO': 2, 'ENTREGUE': 3} %}
         {% set current_step = step_order.get(contrato.status_logistica, 0) %}
         {% for step_key, step_label in steps %}
         {% set step_idx = loop.index0 %}
@@ -144,65 +151,360 @@
         {% endfor %}
       </div>
 
-      {% if session_usuario.perfil == 'transportador' %}
-        {% if contrato.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}
-        <button class="btn btn-primary" onclick="aceitarFrete()"><span class="material-symbols-rounded" style="font-size: 1.2em;">local_shipping</span> Aceitar este frete</button>
-        {% elif contrato.transportador_id == session_usuario.id %}
-          {% if contrato.status_logistica == 'EM_TRANSITO' %}
-          <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Marcar como entregue</button>
-          {% elif contrato.status_logistica == 'ENTREGUE' %}
-          <div class="badge badge-green">Entregue</div>
-          {% endif %}
-        {% endif %}
+      <!-- Atualizar status (transportador em trânsito) -->
+      {% if contrato.transportador_id == session_usuario.id and contrato.status_logistica == 'EM_TRANSITO' %}
+      <button class="btn btn-primary" onclick="atualizarStatus('ENTREGUE')">✅ Marcar como entregue</button>
+      {% elif contrato.status_logistica == 'ENTREGUE' %}
+      <div class="badge badge-green">Entregue</div>
       {% endif %}
-
       <div id="msg-logistica" style="display:none; margin-top:0.75rem;"></div>
     </div>
 
-  </main>
+    <!-- Negociação do frete -->
+    <div class="card" id="card-frete">
+      <div class="card-label">Negociação do Frete</div>
+
+      {% if contrato.status_logistica in ('EM_TRANSITO', 'ENTREGUE') and contrato.valor_frete_saca_final %}
+      <!-- Frete fechado -->
+      <div class="flash success" style="margin-bottom:0;">
+        ✅ Frete fechado em <strong>R$ {{ "%.2f"|format(contrato.valor_frete_saca_final) }}/saca</strong>
+        {% if transportador %}com <strong>{{ transportador.nome }}</strong>{% endif %}.
+      </div>
+
+      {% elif contrato.status_logistica == 'AGUARDANDO_ACEITE_FRETE' %}
+      <!-- Preço publicado pelo responsável — visível a todos -->
+      <div style="background:var(--surface-2); border:1px solid var(--verde-mid); border-radius:var(--radius); padding:1rem; margin-bottom:1rem; text-align:center;">
+        <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.4rem;">Preço publicado pelo responsável — primeiro a aceitar fecha o frete</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--verde-light); font-family:var(--font-display);">
+          R$ {{ "%.2f"|format(contrato.contra_valor_frete) }}/saca
+        </div>
+      </div>
+
+      {% if session_usuario.id == responsavel_frete_id %}
+      <!-- Responsável: ver propostas + atualizar preço -->
+        {% if lances_pendentes %}
+        <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+          {% for lance in lances_pendentes %}
+          {% set nome = proponentes_map.get(lance.proponente_id) %}
+          <div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; background:var(--surface-2); border-radius:var(--radius); border:1px solid var(--border);">
+            <div class="avatar" style="width:32px; height:32px; font-size:0.75rem; flex-shrink:0;">{{ nome.nome[0].upper() if nome else '?' }}</div>
+            <div style="flex:1;">
+              <div style="font-weight:600; color:var(--white); font-size:0.9rem;">{{ nome.nome if nome else 'Transportador' }}</div>
+              <div style="font-weight:700; color:var(--verde-light);">R$ {{ "%.2f"|format(lance.valor_frete_saca) }}/saca</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="responderFrete({{ lance.id }}, 'ACEITAR')">✅ Aceitar</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="responderFrete({{ lance.id }}, 'RECUSAR')">❌ Recusar</button>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:0.5rem 0 1rem;">
+          Aguardando transportadores aceitar ou contra-propor.
+        </div>
+        {% endif %}
+        {% if pode_contra_propor %}
+        <div style="border-top:1px solid var(--border); padding-top:1rem;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+            Atualizar preço publicado — recusa propostas pendentes e republica novo valor aberto.
+          </div>
+          <div style="display:flex; gap:0.75rem; align-items:flex-end;">
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <label style="font-size:0.78rem;">Novo valor (R$/saca)</label>
+              <input type="number" id="input-contra" placeholder="Ex: 12.00" min="0.01" step="0.01" />
+            </div>
+            <button class="btn btn-secondary" id="btn-contra" onclick="enviarContraProposta()" style="margin-bottom:0;">
+              📢 Atualizar preço
+            </button>
+          </div>
+        </div>
+        {% endif %}
+
+      {% elif session_usuario.perfil == 'transportador' %}
+      <!-- Transportador: aceitar preço publicado ou contra-propor -->
+        {% if pode_aceitar_contra_oferta %}
+        <button class="btn btn-primary" id="btn-aceitar-contra" onclick="aceitarContraOferta()" style="margin-bottom:0.75rem;">
+          ✅ Aceitar R$ {{ "%.2f"|format(contrato.contra_valor_frete) }}/saca e assumir o frete
+        </button>
+        {% endif %}
+        {% if meu_lance_pendente %}
+        <div style="background:var(--surface-2); border:1px solid var(--verde-mid); border-radius:var(--radius); padding:0.85rem;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.2rem;">Sua contra-proposta enviada</div>
+          <div style="font-weight:700; color:var(--verde-light); font-size:1.1rem;">R$ {{ "%.2f"|format(meu_lance_pendente.valor_frete_saca) }}/saca</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Aguardando resposta do responsável…</div>
+        </div>
+        {% elif pode_propor_frete %}
+        <div style="display:flex; gap:0.75rem; align-items:flex-end; margin-top:0.25rem;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label style="font-size:0.78rem;">Contra-proposta (R$/saca)</label>
+            <input type="number" id="input-frete" placeholder="Ex: 11.00" min="0.01" step="0.01" />
+          </div>
+          <button class="btn btn-ghost" id="btn-propor" onclick="proporFrete()" style="margin-bottom:0;">
+            ↩ Propor outro valor
+          </button>
+        </div>
+        {% endif %}
+
+      {% else %}
+      <!-- Parte não responsável pelo frete: leitura -->
+      <div style="color:var(--text-soft); font-size:0.88rem; padding:0.25rem 0;">
+        Aguardando o primeiro transportador aceitar o preço publicado.
+      </div>
+      {% endif %}
+      <div id="msg-frete" style="display:none; margin-top:0.75rem;"></div>
+
+      {% else %}
+      <!-- Negociação aberta: AGUARDANDO_TRANSPORTADOR ou EM_NEGOCIACAO_FRETE -->
+
+      <!-- Histórico compacto de propostas já resolvidas -->
+      {% set historico = lances_frete | selectattr('status', 'ne', 'PENDENTE') | list %}
+      {% if historico %}
+      <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border);">
+        <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Histórico</div>
+        {% for lance in historico %}
+        {% set nome = proponentes_map.get(lance.proponente_id) %}
+        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:var(--text-soft); padding:0.2rem 0;">
+          <span>{{ nome.nome if nome else '—' }}</span>
+          <span style="color:var(--verde-light);">R$ {{ "%.2f"|format(lance.valor_frete_saca) }}/saca</span>
+          <span class="badge
+            {% if lance.status == 'ACEITO' %}badge-green
+            {% elif lance.status in ('RECUSADO', 'RECUSADO_AUTO') %}badge-red
+            {% else %}badge-gray{% endif %}"
+            style="font-size:0.62rem; padding:0.05rem 0.35rem;">
+            {{ lance.status.lower().replace('_', ' ') }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Propostas pendentes (view do responsável) -->
+      {% if session_usuario.id == responsavel_frete_id %}
+        {% if lances_pendentes %}
+        <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+          {% for lance in lances_pendentes %}
+          {% set nome = proponentes_map.get(lance.proponente_id) %}
+          <div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; background:var(--surface-2); border-radius:var(--radius); border:1px solid var(--border);">
+            <div class="avatar" style="width:32px; height:32px; font-size:0.75rem; flex-shrink:0;">
+              {{ nome.nome[0].upper() if nome else '?' }}
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:600; color:var(--white); font-size:0.9rem;">{{ nome.nome if nome else 'Transportador' }}</div>
+              <div style="font-weight:700; color:var(--verde-light);">R$ {{ "%.2f"|format(lance.valor_frete_saca) }}/saca</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="responderFrete({{ lance.id }}, 'ACEITAR')">✅ Aceitar</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="responderFrete({{ lance.id }}, 'RECUSAR')">❌ Recusar</button>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem 0;">
+          Aguardando propostas de transportadores.
+        </div>
+        {% endif %}
+
+        {% if pode_contra_propor %}
+        <div style="border-top:1px solid var(--border); padding-top:1rem; margin-top:0.5rem;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+            Contra-proposta — recusa todas as propostas acima e publica um preço aberto. O primeiro transportador a aceitar leva o frete.
+          </div>
+          <div style="display:flex; gap:0.75rem; align-items:flex-end;">
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <label style="font-size:0.78rem;">Valor máximo que aceita pagar (R$/saca)</label>
+              <input type="number" id="input-contra" placeholder="Ex: 12.00" min="0.01" step="0.01" />
+            </div>
+            <button class="btn btn-secondary" id="btn-contra" onclick="enviarContraProposta()" style="margin-bottom:0;">
+              📢 Publicar contra-proposta
+            </button>
+          </div>
+        </div>
+        {% endif %}
+
+      {% elif session_usuario.perfil == 'transportador' %}
+      <!-- View do transportador -->
+        {% if meu_lance_pendente %}
+        <div style="background:var(--surface-2); border:1px solid var(--verde-mid); border-radius:var(--radius); padding:0.85rem; margin-bottom:1rem;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.2rem;">Sua proposta enviada</div>
+          <div style="font-weight:700; color:var(--verde-light); font-size:1.1rem;">R$ {{ "%.2f"|format(meu_lance_pendente.valor_frete_saca) }}/saca</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Aguardando resposta do responsável…</div>
+        </div>
+        {% elif pode_propor_frete %}
+        <div style="display:flex; gap:0.75rem; align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label style="font-size:0.78rem;">Propor valor do frete (R$/saca)</label>
+            <input type="number" id="input-frete" placeholder="Ex: 15.00" min="0.01" step="0.01" />
+          </div>
+          <button class="btn btn-primary" id="btn-propor" onclick="proporFrete()" style="margin-bottom:0;">
+            🚛 Enviar proposta
+          </button>
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem 0;">
+          Faça login como transportador para propor um valor de frete.
+        </div>
+        {% endif %}
+
+      {% else %}
+      <!-- Parte não responsável pelo frete (vendedor ou comprador que não paga o frete) -->
+      <div style="color:var(--text-soft); font-size:0.88rem; padding:0.75rem 0;">
+        A negociação do frete está sendo conduzida pelo
+        <strong>{{ contrato.responsavel_frete.lower() }}</strong>.
+        Acompanhe o andamento abaixo.
+      </div>
+      {% if lances_pendentes %}
+      <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        {% for lance in lances_pendentes %}
+        {% set nome = proponentes_map.get(lance.proponente_id) %}
+        <div style="display:flex; align-items:center; gap:0.75rem; padding:0.6rem 0.75rem; background:var(--surface-2); border-radius:var(--radius); border:1px solid var(--border);">
+          <div class="avatar" style="width:28px; height:28px; font-size:0.72rem; flex-shrink:0;">
+            {{ nome.nome[0].upper() if nome else '?' }}
+          </div>
+          <div style="flex:1; font-size:0.85rem;">
+            <span style="color:var(--text-soft);">{{ nome.nome if nome else 'Transportador' }}</span>
+            <span style="color:var(--verde-light); font-weight:700; margin-left:0.5rem;">R$ {{ "%.2f"|format(lance.valor_frete_saca) }}/saca</span>
+          </div>
+          <span class="badge badge-yellow" style="font-size:0.65rem;">pendente</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% elif contrato.status_logistica == 'EM_NEGOCIACAO_FRETE' %}
+      <div style="color:var(--text-muted); font-size:0.82rem;">Propostas recebidas: aguardando decisão do responsável.</div>
+      {% else %}
+      <div style="color:var(--text-muted); font-size:0.82rem;">Aguardando transportadores fazerem propostas.</div>
+      {% endif %}
+      {% endif %}
+
+      <div id="msg-frete" style="display:none; margin-top:0.75rem;"></div>
+      {% endif %}
+    </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 const CONTRATO_ID = {{ contrato.id }};
+const STATUS_LOGISTICA = "{{ contrato.status_logistica }}";
+let since_id_frete = {{ since_id_frete }};
+let sseFreteConn = null;
+let _freteExibido = false;
+let _recarregando = false;
 
-async function aceitarFrete() {
-  const res = await fetch(`/contratos/${CONTRATO_ID}/aceitar-frete`, {
-    method: 'POST',
-    credentials: 'same-origin',
+const NEGOCIACAO_ATIVA = ['AGUARDANDO_TRANSPORTADOR', 'EM_NEGOCIACAO_FRETE', 'AGUARDANDO_ACEITE_FRETE'];
+if (NEGOCIACAO_ATIVA.includes(STATUS_LOGISTICA)) conectarSSEFrete();
+
+function conectarSSEFrete() {
+  sseFreteConn = new EventSource(`/contratos/${CONTRATO_ID}/eventos?since_id_frete=${since_id_frete}`);
+
+  sseFreteConn.addEventListener('novo_lance_frete', () => recarregarOnce());
+  sseFreteConn.addEventListener('lance_frete_atualizado', () => recarregarOnce());
+
+  sseFreteConn.addEventListener('contrato_atualizado', e => {
+    const d = JSON.parse(e.data);
+    if (d.status_logistica === 'EM_TRANSITO' && !_freteExibido) {
+      _freteExibido = true;
+      sseFreteConn?.close(); sseFreteConn = null;
+      mostrarFreteAceito(d.valor_frete_saca_final);
+    } else {
+      recarregarOnce();
+    }
   });
-  const div = document.getElementById('msg-logistica');
-  div.style.display = 'block';
+
+  sseFreteConn.onerror = () => {
+    sseFreteConn?.close(); sseFreteConn = null;
+    setTimeout(conectarSSEFrete, 3000);
+  };
+}
+
+function recarregarOnce() {
+  if (!_recarregando && !_freteExibido) {
+    _recarregando = true;
+    location.reload();
+  }
+}
+
+function mostrarFreteAceito(valor) {
+  const card = document.getElementById('card-frete');
+  if (card) card.innerHTML = `
+    <div class="card-label">Negociação do Frete</div>
+    <div class="flash success">✅ Frete fechado em <strong>R$ ${valor.toFixed(2)}/saca</strong>. Atualizando…</div>`;
+  const el = document.getElementById('valor-frete-display');
+  if (el) el.innerHTML = `<span style="font-weight:700;color:var(--verde-light);">R$ ${valor.toFixed(2)}/saca</span>`;
+  const badge = document.getElementById('badge-status');
+  if (badge) { badge.className = 'badge badge-blue'; badge.textContent = 'em trânsito'; }
+  setTimeout(() => location.reload(), 2000);
+}
+
+async function proporFrete() {
+  const input = document.getElementById('input-frete');
+  const valor = parseFloat(input?.value);
+  const div = document.getElementById('msg-frete');
+  if (!valor || valor <= 0) { mostrarMsg('error', 'Informe um valor válido.'); return; }
+  const btn = document.getElementById('btn-propor');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  const res = await fetch(`/contratos/${CONTRATO_ID}/lances-frete`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({ valor_frete_saca: valor }),
+  });
+  if (res.ok) { setTimeout(() => location.reload(), 600); }
+  else { const d = await res.json(); mostrarMsg('error', d.detail || 'Erro.'); btn.disabled = false; btn.textContent = '🚛 Enviar proposta'; }
+}
+
+async function responderFrete(lanceId, acao) {
+  const res = await fetch(`/contratos/${CONTRATO_ID}/lances-frete/${lanceId}/responder`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({ acao }),
+  });
+  if (res.ok) { setTimeout(() => location.reload(), 600); }
+  else { const d = await res.json(); mostrarMsg('error', d.detail || 'Erro.'); }
+}
+
+async function enviarContraProposta() {
+  const input = document.getElementById('input-contra');
+  const valor = parseFloat(input?.value);
+  if (!valor || valor <= 0) { mostrarMsg('error', 'Informe um valor válido.'); return; }
+  const btn = document.getElementById('btn-contra');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  const res = await fetch(`/contratos/${CONTRATO_ID}/contra-proposta-frete`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({ valor_frete_saca: valor }),
+  });
+  if (res.ok) { setTimeout(() => location.reload(), 600); }
+  else { const d = await res.json(); mostrarMsg('error', d.detail || 'Erro.'); btn.disabled = false; btn.textContent = '📢 Publicar contra-proposta'; }
+}
+
+async function aceitarContraOferta() {
+  const btn = document.getElementById('btn-aceitar-contra');
+  btn.disabled = true; btn.textContent = 'Aceitando…';
+  const res = await fetch(`/contratos/${CONTRATO_ID}/aceitar-contra-oferta`, {
+    method: 'POST', credentials: 'same-origin',
+  });
   if (res.ok) {
-    div.className = 'flash success';
-    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Frete aceito! Atualizando...';
-    setTimeout(() => location.reload(), 1200);
+    const d = await res.json();
+    mostrarFreteAceito(d.valor_frete_saca_final);
   } else {
     const d = await res.json();
-    div.className = 'flash error';
-    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> ' + (d.detail || 'Erro.');
+    mostrarMsg('error', d.detail || 'Este frete já foi aceito por outro transportador.');
+    btn.disabled = false; btn.textContent = `✅ Aceitar`;
   }
+}
+
+function mostrarMsg(tipo, texto) {
+  const div = document.getElementById('msg-frete');
+  if (!div) return;
+  div.style.display = 'block';
+  div.className = `flash ${tipo}`;
+  div.textContent = (tipo === 'error' ? '❌ ' : '✅ ') + texto;
 }
 
 async function atualizarStatus(status) {
   const res = await fetch(`/contratos/${CONTRATO_ID}/status`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    credentials: 'same-origin',
+    method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
     body: JSON.stringify({status}),
   });
   const div = document.getElementById('msg-logistica');
   div.style.display = 'block';
-  if (res.ok) {
-    div.className = 'flash success';
-    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">check_circle</span> Status atualizado! Atualizando...';
-    setTimeout(() => location.reload(), 1200);
-  } else {
-    const d = await res.json();
-    div.className = 'flash error';
-    div.innerHTML = '<span class="material-symbols-rounded" style="font-size: 1.2em; vertical-align: middle;">cancel</span> ' + (d.detail || 'Erro.');
-  }
+  if (res.ok) { div.className = 'flash success'; div.textContent = '✅ Status atualizado! Atualizando…'; setTimeout(() => location.reload(), 1200); }
+  else { const d = await res.json(); div.className = 'flash error'; div.textContent = '❌ ' + (d.detail || 'Erro.'); }
 }
 </script>
 {% endblock %}

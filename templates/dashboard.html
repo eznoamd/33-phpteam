@@ -1,16 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='dashboard' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
-
-  <main class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
+{% block content %}
+<div class="main">
 
     <div class="page-header flex items-center justify-between">
       <div>
@@ -112,6 +104,35 @@
         </div>
         {% endif %}
       </div>
+
+      {% if meus_contratos %}
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="card-label" style="margin-bottom:0;">Meus contratos</div>
+          <a href="/meus-contratos" class="btn btn-ghost btn-sm">Ver todos</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Contrato</th><th>Modalidade</th><th>Valor/saca</th><th>Logística</th><th>Ação</th></tr></thead>
+            <tbody>
+            {% for c in meus_contratos %}
+            <tr>
+              <td>#{{ c.id }}</td>
+              <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
+              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+              <td>
+                <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
+                  {{ c.status_logistica.lower().replace('_', ' ') }}
+                </span>
+              </td>
+              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
 
     {% elif session_usuario.perfil == 'transportador' %}
 
@@ -273,8 +294,36 @@
         {% endif %}
       </div>
 
+      {% if meus_contratos %}
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="card-label" style="margin-bottom:0;">Meus contratos</div>
+          <a href="/meus-contratos" class="btn btn-ghost btn-sm">Ver todos</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Contrato</th><th>Modalidade</th><th>Valor/saca</th><th>Logística</th><th>Ação</th></tr></thead>
+            <tbody>
+            {% for c in meus_contratos %}
+            <tr>
+              <td>#{{ c.id }}</td>
+              <td>{{ c.modalidade_venda.replace('_', ' ') }}</td>
+              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+              <td>
+                <span class="badge {% if c.status_logistica == 'ENTREGUE' %}badge-green{% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue{% elif c.status_logistica == 'AGUARDANDO_TRANSPORTADOR' %}badge-yellow{% else %}badge-gray{% endif %}">
+                  {{ c.status_logistica.lower().replace('_', ' ') }}
+                </span>
+              </td>
+              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
     {% endif %}
 
-  </main>
 </div>
 {% endblock %}

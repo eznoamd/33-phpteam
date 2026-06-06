@@ -1,28 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Mercado{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Principal</div>
-      <a href="/dashboard" class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
-      <a href="/mercado" class="sidebar-link active"><span class="icon">🌾</span> Mercado</a>
-      <a href="/meus-contratos" class="sidebar-link"><span class="icon">📄</span> Contratos</a>
-    </div>
-    {% if session_usuario %}
-    <div class="sidebar-section">
-      <div class="sidebar-label">Conta</div>
-      <a href="/perfil" class="sidebar-link"><span class="icon">👤</span> Perfil</a>
-      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
-    </div>
-    {% endif %}
-  </aside>
-
-  <main class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
+{% block content %}
+<div class="main">
 
     <div class="page-header flex items-center justify-between">
       <div>
@@ -111,7 +91,6 @@
       <p>Seja o primeiro a publicar!</p>
     </div>
     {% endif %}
-  </main>
 </div>
 
 {% if session_usuario and session_usuario.perfil != 'transportador' %}

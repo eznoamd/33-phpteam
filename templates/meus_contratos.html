@@ -1,16 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Meus Contratos{% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='contratos' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
-
-  <main class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
+{% block content %}
+<div class="main">
 
     <div class="page-header">
       <h1 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;"><span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">description</span> Meus Contratos</h1>
@@ -45,7 +37,12 @@
               </span>
             </td>
             <td>
-              <span class="badge badge-yellow">aguardando transportador</span>
+              <span class="badge
+                {% if c.status_logistica == 'AGUARDANDO_ACEITE_FRETE' %}badge-green
+                {% elif c.status_logistica == 'EM_NEGOCIACAO_FRETE' %}badge-blue
+                {% else %}badge-yellow{% endif %}">
+                {{ c.status_logistica.lower().replace('_', ' ') }}
+              </span>
             </td>
             <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver e aceitar</a></td>
           </tr>
@@ -121,6 +118,5 @@
     </div>
     {% endif %}
 
-  </main>
 </div>
 {% endblock %}

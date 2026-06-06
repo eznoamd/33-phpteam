@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.usuario import Usuario
 from app.models.demanda import Demanda
 from app.models.viagem import Viagem
-from app.models.negociacao import OfertaMercado, NegociacaoLance, ContratoTransporte
+from app.models.negociacao import OfertaMercado, NegociacaoLance, ContratoTransporte, LanceFrete
 from app.seguranca import criar_token, hash_senha, verificar_senha
 
 router = APIRouter(tags=["Frontend"])
@@ -192,7 +192,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         ).order_by(ContratoTransporte.id.desc()).limit(5).all()
         
         ofertas_disponiveis = db.query(OfertaMercado).filter(
-            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
             OfertaMercado.autor_id != usuario.id,
             OfertaMercado.tipo_demanda == "QUERO_COMPRAR",
         ).order_by(OfertaMercado.id.desc()).limit(5).all()
@@ -227,12 +227,32 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     # Mantendo o transportador mapeado para evitar quebras no render
     elif usuario.perfil == "transportador":
         fretes_disponiveis = db.query(ContratoTransporte).filter(
-            ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR"
+            ContratoTransporte.status_logistica.in_([
+                "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
+            ])
         ).order_by(ContratoTransporte.id.desc()).limit(10).all()
         meus_fretes = db.query(ContratoTransporte).filter(
             ContratoTransporte.transportador_id == usuario.id
         ).order_by(ContratoTransporte.id.desc()).limit(10).all()
         ctx = {"fretes_disponiveis": fretes_disponiveis, "meus_fretes": meus_fretes}
+
+    elif usuario.perfil == "comprador":
+        minhas_ofertas = db.query(OfertaMercado).filter(
+            OfertaMercado.autor_id == usuario.id
+        ).order_by(OfertaMercado.id.desc()).limit(10).all()
+        meus_contratos = db.query(ContratoTransporte).filter(
+            ContratoTransporte.comprador_id == usuario.id
+        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
+        ofertas_disponiveis = db.query(OfertaMercado).filter(
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"]),
+            OfertaMercado.autor_id != usuario.id,
+            OfertaMercado.tipo_demanda == "QUERO_VENDER",
+        ).order_by(OfertaMercado.id.desc()).limit(5).all()
+        ctx = {
+            "minhas_ofertas": minhas_ofertas,
+            "meus_contratos": meus_contratos,
+            "ofertas_disponiveis": ofertas_disponiveis,
+        }
 
     return render("dashboard.html", request, db, **ctx)
 
@@ -273,7 +293,7 @@ def mercado_page(
     db: Session = Depends(get_db),
 ):
     q = db.query(OfertaMercado).filter(
-        OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"])
+        OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO", "AGUARDANDO_ACEITE"])
     )
     if produto:
         q = q.filter(OfertaMercado.produto.ilike(f"%{produto}%"))
@@ -319,16 +339,36 @@ def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_
             ContratoTransporte.oferta_id == oferta_id
         ).first()
 
+    lances_pendentes = [l for l in lances if l.status_lance == "PENDENTE"]
+    ids_proponentes = {l.proponente_id for l in lances_pendentes}
+    proponentes_negociacao = db.query(Usuario).filter(Usuario.id.in_(ids_proponentes)).all() if ids_proponentes else []
+    proponentes_map = {u.id: u for u in proponentes_negociacao}
+
+    pode_aceitar_contra_oferta = (
+        oferta.status == "AGUARDANDO_ACEITE"
+        and usuario.perfil != "transportador"
+        and oferta.autor_id != usuario.id
+        and not any(l.proponente_id == usuario.id for l in lances_pendentes)
+    )
+    pode_publicar_contra_proposta = (
+        oferta.status in ("EM_NEGOCIACAO", "AGUARDANDO_ACEITE")
+        and oferta.autor_id == usuario.id
+    )
+
     return render(
         "negociacao.html",
         request,
         db,
         oferta=oferta,
         lances=lances,
+        lances_pendentes=lances_pendentes,
+        proponentes_map=proponentes_map,
         ultimo_pendente=ultimo_pendente,
         autor=autor,
         since_id=since_id,
         contrato=contrato,
+        pode_aceitar_contra_oferta=pode_aceitar_contra_oferta,
+        pode_publicar_contra_proposta=pode_publicar_contra_proposta,
     )
 
 
@@ -341,7 +381,9 @@ def meus_contratos_page(request: Request, db: Session = Depends(get_db)):
     if usuario.perfil == "transportador":
         disponiveis = (
             db.query(ContratoTransporte)
-            .filter(ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR")
+            .filter(ContratoTransporte.status_logistica.in_([
+                "AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE"
+            ]))
             .order_by(ContratoTransporte.id.desc())
             .all()
         )
@@ -410,6 +452,40 @@ def contrato_page(contrato_id: int, request: Request, db: Session = Depends(get_
     )
     oferta = db.query(OfertaMercado).filter(OfertaMercado.id == contrato.oferta_id).first()
 
+    lances_frete = (
+        db.query(LanceFrete)
+        .filter(LanceFrete.contrato_id == contrato_id)
+        .order_by(LanceFrete.id)
+        .all()
+    )
+    lances_pendentes = [l for l in lances_frete if l.status == "PENDENTE"]
+    responsavel_frete_id = (
+        contrato.vendedor_id if contrato.responsavel_frete == "VENDEDOR" else contrato.comprador_id
+    )
+    meu_lance_pendente = next(
+        (l for l in lances_pendentes if l.proponente_id == usuario.id), None
+    )
+
+    # Monta mapa proponente_id → nome (para a view do responsável)
+    ids_proponentes = {l.proponente_id for l in lances_frete}
+    proponentes = db.query(Usuario).filter(Usuario.id.in_(ids_proponentes)).all()
+    proponentes_map = {u.id: u for u in proponentes}
+
+    status = contrato.status_logistica
+    pode_propor_frete = (
+        usuario.perfil == "transportador"
+        and status in ("AGUARDANDO_TRANSPORTADOR", "EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE")
+        and meu_lance_pendente is None
+    )
+    pode_contra_propor = (
+        usuario.id == responsavel_frete_id
+        and status in ("EM_NEGOCIACAO_FRETE", "AGUARDANDO_ACEITE_FRETE")
+    )
+    pode_aceitar_contra_oferta = (
+        usuario.perfil == "transportador" and status == "AGUARDANDO_ACEITE_FRETE"
+    )
+    since_id_frete = lances_frete[-1].id if lances_frete else 0
+
     return render(
         "contrato.html",
         request,
@@ -419,4 +495,13 @@ def contrato_page(contrato_id: int, request: Request, db: Session = Depends(get_
         comprador=comprador,
         transportador=transportador,
         oferta=oferta,
+        lances_frete=lances_frete,
+        lances_pendentes=lances_pendentes,
+        meu_lance_pendente=meu_lance_pendente,
+        responsavel_frete_id=responsavel_frete_id,
+        proponentes_map=proponentes_map,
+        pode_propor_frete=pode_propor_frete,
+        pode_contra_propor=pode_contra_propor,
+        pode_aceitar_contra_oferta=pode_aceitar_contra_oferta,
+        since_id_frete=since_id_frete,
     )

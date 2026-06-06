@@ -78,16 +78,8 @@
 </style>
 {% endblock %}
 
-{% block layout %}
-<div class="layout-sidebar">
-  {% with active_page='mercado' %}
-    {% include "partials/sidebar.html" %}
-  {% endwith %}
-
-  <main class="main">
-    {% for msg in flash_messages %}
-      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
-    {% endfor %}
+{% block content %}
+<div class="main">
 
     <div class="page-header">
       <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
@@ -103,7 +95,7 @@
       </div>
       <p style="margin-top:0.4rem; color:var(--text-soft); font-size:0.88rem;">
         {{ oferta.quantidade_total|int }} sacas ·
-        {% if oferta.preco_saca_inicial %}Referência R$ {{ "%.2f"|format(oferta.preco_saca_inicial) }}/saca · {% endif %}
+        {% if oferta.preco_unidade_inicial %}Referência R$ {{ "%.2f"|format(oferta.preco_unidade_inicial) }}/saca · {% endif %}
         Envio até {{ oferta.data_limite_envio.strftime('%d/%m/%Y') }} ·
         <span class="material-symbols-rounded" style="font-size: 1.1em; vertical-align: bottom;">location_on</span> {{ oferta.cidade_origem }}{% if oferta.estado_origem %}/{{ oferta.estado_origem }}{% endif %}
         · por <strong>{{ autor.nome.split()[0] }}</strong>
@@ -158,26 +150,180 @@
         <a href="/contratos/{{ contrato.id }}" class="btn btn-primary btn-sm" style="margin-left:1rem;">Ver contrato</a>
         {% endif %}
       </div>
-      {% else %}
 
-        {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}
-        <div id="botoes-resposta" class="resposta-bar">
-          <p style="margin-bottom:0.6rem; font-size:0.88rem; color:var(--text-soft);">
-            Lance pendente:
-            <strong style="color:var(--white);">R$ {{ "%.2f"|format(ultimo_pendente.valor_lance_saca) }}/saca</strong>
-            — {{ ultimo_pendente.modalidade_venda.replace('_', ' ') }}
-          </p>
-          <div class="flex gap-2">
-            <button class="btn btn-primary btn-sm" onclick="responderLance({{ ultimo_pendente.id }}, 'ACEITAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Aceitar</button>
-            <button class="btn" style="background:var(--danger); color:#fff;" onclick="responderLance({{ ultimo_pendente.id }}, 'RECUSAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">cancel</span> Recusar</button>
-            <button class="btn btn-ghost btn-sm" onclick="mostrarForm()"><span class="material-symbols-rounded" style="font-size: 1.2em;">reply</span> Contraproposta</button>
+      {% elif oferta.status == 'AGUARDANDO_ACEITE' %}
+      <!-- Preço aberto publicado -->
+      <div class="guardrail-bar" style="margin-bottom:1rem;">
+        📢 <strong>Preço publicado:</strong>
+        R$ {{ "%.2f"|format(oferta.contra_valor_saca) }}/saca
+        · {{ oferta.contra_modalidade_venda.replace('_', ' ') if oferta.contra_modalidade_venda else '' }}
+        <span style="margin-left:0.5rem; font-size:0.78rem; color:var(--text-muted);">Primeiro a aceitar fecha o negócio.</span>
+      </div>
+
+      {% if session_usuario.id == oferta.autor_id %}
+      <!-- Autor: propostas pendentes + atualizar preço -->
+        {% if lances_pendentes %}
+        <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+          {% for lance in lances_pendentes %}
+          {% set proponente = proponentes_map.get(lance.proponente_id) %}
+          <div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; background:var(--surface-2); border-radius:var(--radius); border:1px solid var(--border);">
+            <div class="avatar" style="width:32px; height:32px; font-size:0.75rem; flex-shrink:0;">{{ proponente.nome[0].upper() if proponente else '?' }}</div>
+            <div style="flex:1;">
+              <div style="font-weight:600; color:var(--white); font-size:0.9rem;">{{ proponente.nome if proponente else 'Comprador' }}</div>
+              <div style="font-weight:700; color:var(--verde-light);">R$ {{ "%.2f"|format(lance.valor_lance_saca) }}/saca · {{ lance.modalidade_venda.replace('_', ' ') }}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="responderLance({{ lance.id }}, 'ACEITAR')">✅ Aceitar</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="responderLance({{ lance.id }}, 'RECUSAR')">❌ Recusar</button>
           </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted); font-size:0.85rem; padding:0.5rem 0 1rem;">Nenhuma contraproposta recebida ainda.</div>
+        {% endif %}
+        {% if pode_publicar_contra_proposta %}
+        <div style="border-top:1px solid var(--border); padding-top:1rem;">
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+            Atualizar preço publicado — recusa propostas pendentes e republica novo valor aberto.
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label style="font-size:0.78rem;">Novo valor (R$/saca)</label>
+              <input type="number" id="contra-valor" placeholder="Ex: 148.50" min="0.01" step="0.01"
+                     value="{{ "%.2f"|format(oferta.contra_valor_saca) if oferta.contra_valor_saca else '' }}" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:0.78rem;">Modalidade</label>
+              <select id="contra-modalidade">
+                <option value="">Selecione...</option>
+                <option value="FOB_FAZENDA" {% if oferta.contra_modalidade_venda == 'FOB_FAZENDA' %}selected{% endif %}>FOB Fazenda</option>
+                <option value="FOB_ARMAZEM" {% if oferta.contra_modalidade_venda == 'FOB_ARMAZEM' %}selected{% endif %}>FOB Armazém</option>
+                <option value="CIF" {% if oferta.contra_modalidade_venda == 'CIF' %}selected{% endif %}>CIF (produtor entrega)</option>
+                <option value="POSTO_INDUSTRIA" {% if oferta.contra_modalidade_venda == 'POSTO_INDUSTRIA' %}selected{% endif %}>Posto Indústria</option>
+                <option value="POSTO_COOPERATIVA" {% if oferta.contra_modalidade_venda == 'POSTO_COOPERATIVA' %}selected{% endif %}>Posto Cooperativa</option>
+                <option value="POSTO_PORTO" {% if oferta.contra_modalidade_venda == 'POSTO_PORTO' %}selected{% endif %}>Posto Porto</option>
+                <option value="VENDA_A_RETIRAR" {% if oferta.contra_modalidade_venda == 'VENDA_A_RETIRAR' %}selected{% endif %}>Venda a Retirar</option>
+                <option value="BARTER" {% if oferta.contra_modalidade_venda == 'BARTER' %}selected{% endif %}>Barter</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="btn-contra-proposta" onclick="publicarContraProposta()">📢 Atualizar preço publicado</button>
+          <div id="msg-contra" style="display:none; margin-top:0.5rem;"></div>
+        </div>
+        {% endif %}
+
+      {% else %}
+      <!-- Proponente: aceitar preço publicado ou contra-propor -->
+        {% if pode_aceitar_contra_oferta %}
+        <button class="btn btn-primary" id="btn-aceitar-contra" onclick="aceitarContraOfertaOferta()" style="margin-bottom:0.75rem;">
+          ✅ Aceitar R$ {{ "%.2f"|format(oferta.contra_valor_saca) }}/saca · {{ oferta.contra_modalidade_venda.replace('_', ' ') if oferta.contra_modalidade_venda else '' }}
+        </button>
+        {% endif %}
+        {% if ultimo_pendente and ultimo_pendente.proponente_id == session_usuario.id %}
+        <div class="card">
+          <div class="card-label">Sua contraproposta enviada</div>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin:0;">
+            R$ {{ "%.2f"|format(ultimo_pendente.valor_lance_saca) }}/saca · {{ ultimo_pendente.modalidade_venda.replace('_', ' ') }}
+            — Aguardando resposta.
+          </p>
+        </div>
+        {% else %}
+        <div class="card">
+          <div class="card-label" style="margin-bottom:0.85rem;">↩ Enviar contraproposta ao preço publicado</div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Valor por saca (R$)</label>
+              <input type="number" id="valor_lance" step="0.01" min="0.01" placeholder="Ex: 145.00" />
+            </div>
+            <div class="form-group">
+              <label>Modalidade de entrega</label>
+              <select id="modalidade_venda">
+                <option value="">Selecione...</option>
+                <option value="FOB_FAZENDA">FOB Fazenda</option>
+                <option value="FOB_ARMAZEM">FOB Armazém</option>
+                <option value="CIF">CIF (produtor entrega)</option>
+                <option value="POSTO_INDUSTRIA">Posto Indústria</option>
+                <option value="POSTO_COOPERATIVA">Posto Cooperativa</option>
+                <option value="POSTO_PORTO">Posto Porto</option>
+                <option value="VENDA_A_RETIRAR">Venda a Retirar</option>
+                <option value="BARTER">Barter</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2" style="justify-content:flex-end;">
+            <button class="btn btn-ghost" onclick="enviarLance()">↩ Enviar contraproposta</button>
+          </div>
+          <div id="msg-lance" style="display:none; margin-top:0.6rem;"></div>
+        </div>
+        {% endif %}
+      {% endif %}
+
+      {% else %}
+      <!-- ABERTA / EM_NEGOCIACAO -->
+
+        {% if oferta.autor_id == session_usuario.id %}
+        <div id="lances-pendentes-container"{% if not lances_pendentes %} style="display:none;"{% endif %}>
+          {% for lance in lances_pendentes %}
+          <div class="resposta-bar" id="botoes-{{ lance.id }}" style="margin-bottom:0.5rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+              <p style="margin:0; font-size:0.88rem; color:var(--text-soft);">
+                <strong style="color:var(--white);">{{ proponentes_map[lance.proponente_id].nome if lance.proponente_id in proponentes_map else 'Participante' }}</strong>
+                propõe <strong style="color:var(--verde-light);">R$ {{ "%.2f"|format(lance.valor_lance_saca) }}/saca</strong>
+                — {{ lance.modalidade_venda.replace('_', ' ') }}
+              </p>
+              <div class="flex gap-2">
+                <button class="btn btn-primary btn-sm" onclick="responderLance({{ lance.id }}, 'ACEITAR')">✅ Aceitar</button>
+                <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance({{ lance.id }}, 'RECUSAR')">❌ Recusar</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          {% if pode_publicar_contra_proposta %}
+          <div style="text-align:right; margin-top:0.25rem;">
+            <button class="btn btn-ghost btn-sm" onclick="mostrarFormContra()">📢 Publicar preço aberto</button>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Form publicar preço aberto (autor) -->
+        {% if pode_publicar_contra_proposta %}
+        <div id="form-contra-proposta" class="card" style="display:none;">
+          <div class="card-label" style="margin-bottom:0.75rem;">📢 Publicar preço aberto</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            Recusa todas as propostas pendentes e publica um preço. Qualquer comprador pode aceitar.
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Valor (R$/saca)</label>
+              <input type="number" id="contra-valor" placeholder="Ex: 148.50" min="0.01" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label>Modalidade</label>
+              <select id="contra-modalidade">
+                <option value="">Selecione...</option>
+                <option value="FOB_FAZENDA">FOB Fazenda</option>
+                <option value="FOB_ARMAZEM">FOB Armazém</option>
+                <option value="CIF">CIF (produtor entrega)</option>
+                <option value="POSTO_INDUSTRIA">Posto Indústria</option>
+                <option value="POSTO_COOPERATIVA">Posto Cooperativa</option>
+                <option value="POSTO_PORTO">Posto Porto</option>
+                <option value="VENDA_A_RETIRAR">Venda a Retirar</option>
+                <option value="BARTER">Barter</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2" style="justify-content:flex-end;">
+            <button class="btn btn-ghost btn-sm" onclick="ocultarFormContra()">Cancelar</button>
+            <button class="btn btn-secondary" id="btn-contra-proposta" onclick="publicarContraProposta()">📢 Publicar</button>
+          </div>
+          <div id="msg-contra" style="display:none; margin-top:0.5rem;"></div>
         </div>
         {% endif %}
 
         <div id="form-lance" class="card"
-          {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}style="display:none;"{% endif %}
-          {% if oferta.autor_id == session_usuario.id and not lances %}style="display:none;"{% endif %}>
+          {% if oferta.autor_id == session_usuario.id %}style="display:none;"
+          {% elif ultimo_pendente and ultimo_pendente.proponente_id == session_usuario.id %}style="display:none;"
+          {% endif %}>
           <div class="card-label" style="margin-bottom:0.85rem;">
             {% if ultimo_pendente and ultimo_pendente.proponente_id == session_usuario.id %}
               Lance pendente aguardando resposta...
@@ -199,7 +345,7 @@
               </label>
               <input type="number" id="valor_lance" step="0.01" min="0.01"
                      placeholder="Ex: 148.50"
-                     {% if oferta.preco_saca_inicial %}value="{{ "%.2f"|format(oferta.preco_saca_inicial) }}"{% endif %} />
+                     {% if oferta.preco_unidade_inicial %}value="{{ "%.2f"|format(oferta.preco_unidade_inicial) }}"{% endif %} />
             </div>
             <div class="form-group">
               <label>Modalidade de entrega</label>
@@ -207,7 +353,7 @@
                 <option value="">Selecione...</option>
                 <option value="FOB_FAZENDA">FOB Fazenda (comprador retira na fazenda)</option>
                 <option value="FOB_ARMAZEM">FOB Armazém (comprador retira no armazém)</option>
-                <option value="CIF">CIF (vendedor entrega — frete incluso)</option>
+                <option value="CIF">CIF (produtor entrega — frete incluso)</option>
                 <option value="POSTO_INDUSTRIA">Posto Indústria</option>
                 <option value="POSTO_COOPERATIVA">Posto Cooperativa</option>
                 <option value="POSTO_PORTO">Posto Porto</option>
@@ -226,7 +372,6 @@
       {% endif %}
     </div>
 
-  </main>
 </div>
 {% endblock %}
 
@@ -292,6 +437,10 @@ if (OFERTA_STATUS !== 'FECHADA') {
     handleContratoCreado(c);
     sseConn.close();
   });
+
+  sseConn.addEventListener('oferta_atualizada', () => {
+    location.reload();
+  });
 }
 
 function appendBubble(lance) {
@@ -321,47 +470,52 @@ function appendBubble(lance) {
   scrollChat();
 }
 
-let pendenteLanceId = {{ ultimo_pendente.id if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id else 'null' }};
+const IS_AUTOR = {{ 'true' if oferta.autor_id == session_usuario.id else 'false' }};
 
 function updateActionAreaFromLance(lance) {
   const formLance = document.getElementById('form-lance');
-  const botoesResp = document.getElementById('botoes-resposta');
+  const container = document.getElementById('lances-pendentes-container');
 
-  if (lance.status_lance === 'PENDENTE' && lance.proponente_id !== MY_ID) {
-    pendenteLanceId = lance.id;
-    // Atualiza botões de resposta
-    if (botoesResp) {
-      botoesResp.style.display = 'block';
-      botoesResp.querySelector('p').innerHTML =
-        `Lance pendente: <strong style="color:var(--white)">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong> — ${lance.modalidade_venda.replace(/_/g, ' ')}`;
-      const aceitarBtn = botoesResp.querySelector('.btn-primary');
-      aceitarBtn.onclick = () => responderLance(lance.id, 'ACEITAR');
-      const recusarBtn = botoesResp.querySelectorAll('.btn')[1];
-      recusarBtn.onclick = () => responderLance(lance.id, 'RECUSAR');
-    } else {
-      // Cria div de botões dinamicamente
-      const div = document.createElement('div');
-      div.id = 'botoes-resposta';
-      div.className = 'resposta-bar';
-      div.innerHTML = `
-        <p style="margin-bottom:0.6rem; font-size:0.88rem; color:var(--text-soft);">
-          Lance pendente: <strong style="color:var(--white)">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong> — ${lance.modalidade_venda.replace(/_/g, ' ')}
-        </p>
-        <div class="flex gap-2">
-          <button class="btn btn-primary btn-sm" onclick="responderLance(${lance.id}, 'ACEITAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">check_circle</span> Aceitar</button>
-          <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance(${lance.id}, 'RECUSAR')"><span class="material-symbols-rounded" style="font-size: 1.2em;">cancel</span> Recusar</button>
-          <button class="btn btn-ghost btn-sm" onclick="mostrarForm()"><span class="material-symbols-rounded" style="font-size: 1.2em;">reply</span> Contraproposta</button>
+  if (lance.status_lance === 'PENDENTE' && lance.proponente_id !== MY_ID && IS_AUTOR) {
+    // Novo lance de um participante — adicionar card ao container
+    if (container && !document.getElementById('botoes-' + lance.id)) {
+      const card = document.createElement('div');
+      card.className = 'resposta-bar';
+      card.id = 'botoes-' + lance.id;
+      card.style.marginBottom = '0.5rem';
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+          <p style="margin:0; font-size:0.88rem; color:var(--text-soft);">
+            Participante propõe <strong style="color:var(--verde-light);">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong>
+            — ${lance.modalidade_venda.replace(/_/g, ' ')}
+          </p>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="responderLance(${lance.id}, 'ACEITAR')">✅ Aceitar</button>
+            <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance(${lance.id}, 'RECUSAR')">❌ Recusar</button>
+          </div>
         </div>
       `;
-      document.getElementById('action-area').prepend(div);
+      const publishRow = container.querySelector('[onclick="mostrarFormContra()"]')?.closest('div[style*="text-align"]');
+      if (publishRow) container.insertBefore(card, publishRow);
+      else container.appendChild(card);
+      container.style.display = 'block';
     }
-    if (formLance) formLance.style.display = 'none';
   } else if (lance.status_lance === 'PENDENTE' && lance.proponente_id === MY_ID) {
-    if (botoesResp) botoesResp.style.display = 'none';
+    // Meu próprio lance está pendente — esconder form
     if (formLance) formLance.style.display = 'none';
-  } else if (lance.status_lance === 'RECUSADO' || lance.status_lance === 'CONTRAPROPOSTA') {
-    if (botoesResp) botoesResp.style.display = 'none';
-    if (formLance) formLance.style.display = 'block';
+  } else if (lance.status_lance === 'RECUSADO' || lance.status_lance === 'RECUSADO_AUTO') {
+    if (IS_AUTOR) {
+      // Remover card deste lance
+      document.getElementById('botoes-' + lance.id)?.remove();
+      if (container && container.querySelectorAll('.resposta-bar').length === 0) {
+        container.style.display = 'none';
+      }
+    } else if (lance.proponente_id === MY_ID) {
+      // Meu lance foi recusado — posso enviar novo
+      if (formLance) formLance.style.display = 'block';
+    }
+  } else if (lance.status_lance === 'CONTRAPROPOSTA') {
+    if (!IS_AUTOR && formLance) formLance.style.display = 'block';
   }
 }
 
@@ -370,6 +524,22 @@ function mostrarForm() {
   if (f) {
     f.style.display = 'block';
     f.scrollIntoView({behavior: 'smooth'});
+  }
+}
+
+function mostrarFormContra() {
+  const container = document.getElementById('lances-pendentes-container');
+  if (container) container.style.display = 'none';
+  const f = document.getElementById('form-contra-proposta');
+  if (f) { f.style.display = 'block'; f.scrollIntoView({behavior: 'smooth'}); }
+}
+
+function ocultarFormContra() {
+  const f = document.getElementById('form-contra-proposta');
+  if (f) f.style.display = 'none';
+  const container = document.getElementById('lances-pendentes-container');
+  if (container && container.querySelectorAll('.resposta-bar').length > 0) {
+    container.style.display = 'block';
   }
 }
 
@@ -443,16 +613,58 @@ async function responderLance(lanceId, acao) {
     const d = await res.json();
     if (d.resultado === 'ACEITO') {
       handleContratoCreado(d);
+    } else if (OFERTA_STATUS === 'AGUARDANDO_ACEITE') {
+      location.reload();
     } else {
-      // RECUSADO — mostra form novamente
-      const b = document.getElementById('botoes-resposta');
-      if (b) b.style.display = 'none';
-      const f = document.getElementById('form-lance');
-      if (f) f.style.display = 'block';
+      // Recusado: remover card do lance
+      document.getElementById('botoes-' + lanceId)?.remove();
+      const container = document.getElementById('lances-pendentes-container');
+      if (container && container.querySelectorAll('.resposta-bar').length === 0) {
+        container.style.display = 'none';
+      }
     }
   } else {
     const d = await res.json();
     alert('Erro: ' + (d.detail || 'Erro.'));
+  }
+}
+
+async function publicarContraProposta() {
+  const valor = parseFloat(document.getElementById('contra-valor')?.value);
+  const modalidade = document.getElementById('contra-modalidade')?.value;
+  const div = document.getElementById('msg-contra');
+  if (!valor || !modalidade) {
+    if (div) { div.style.display = 'block'; div.className = 'flash error'; div.textContent = '❌ Informe valor e modalidade.'; }
+    return;
+  }
+  const btn = document.getElementById('btn-contra-proposta');
+  if (btn) { btn.disabled = true; btn.textContent = 'Publicando…'; }
+  const res = await fetch(`/ofertas/${OFERTA_ID}/contra-proposta`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin',
+    body: JSON.stringify({valor_lance_saca: valor, modalidade_venda: modalidade}),
+  });
+  if (res.ok) {
+    setTimeout(() => location.reload(), 500);
+  } else {
+    const d = await res.json();
+    if (div) { div.style.display = 'block'; div.className = 'flash error'; div.textContent = '❌ ' + formatarErro(d.detail); }
+    if (btn) { btn.disabled = false; btn.textContent = '📢 Publicar'; }
+  }
+}
+
+async function aceitarContraOfertaOferta() {
+  const btn = document.getElementById('btn-aceitar-contra');
+  if (btn) { btn.disabled = true; btn.textContent = 'Aceitando…'; }
+  const res = await fetch(`/ofertas/${OFERTA_ID}/aceitar-contra-oferta`, {
+    method: 'POST', credentials: 'same-origin',
+  });
+  if (res.ok) {
+    const d = await res.json();
+    handleContratoCreado(d);
+  } else {
+    const d = await res.json();
+    alert('❌ ' + (d.detail || 'Este preço já foi aceito por outra pessoa.'));
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Aceitar'; }
   }
 }
 </script>
