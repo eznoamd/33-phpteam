@@ -7,66 +7,19 @@
 
 {% block styles %}
 <style>
-  .catalogo-header {
-    padding: 3rem 0 2rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 2rem;
-  }
-  .catalogo-header h1 {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 0.35rem;
-  }
+  .catalogo-header { padding: 3rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .catalogo-header h1 { font-family: var(--font-display); font-size: 2rem; font-weight: 400; color: var(--white); margin-bottom: 0.35rem; }
   .catalogo-header p { color: var(--text-muted); }
-  .filtros {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-  }
+  .filtros { display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap; }
   .filtros input, .filtros select { width: auto; min-width: 160px; }
-  .prod-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
-  }
-  .prod-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    transition: border-color 0.2s, transform 0.2s;
-  }
+  .prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+  .prod-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; transition: border-color 0.2s, transform 0.2s; }
   .prod-card:hover { border-color: var(--verde-mid); transform: translateY(-2px); }
   .prod-header { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1rem; }
-  .prod-name {
-    font-family: var(--font-display);
-    font-weight: 700;
-    color: var(--white);
-    font-size: 1rem;
-    margin-bottom: 0.1rem;
-  }
-  .prod-loc { font-size: 0.78rem; color: var(--text-muted); }
-  .prod-bio {
-    font-size: 0.82rem;
-    color: var(--text-soft);
-    line-height: 1.55;
-    margin-bottom: 1rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .prod-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px solid var(--border);
-    padding-top: 0.85rem;
-    margin-top: 0.85rem;
-  }
+  .prod-name { font-family: var(--font-display); font-weight: 400; color: var(--white); font-size: 1rem; margin-bottom: 0.1rem; }
+  .prod-loc { font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; }
+  .prod-bio { font-size: 0.82rem; color: var(--text-soft); line-height: 1.55; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .prod-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 0.85rem; margin-top: 0.85rem; }
   .prod-rating { display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; }
   .prod-rating .num { color: var(--white); font-weight: 600; }
   .prod-rating .count { color: var(--text-muted); font-size: 0.75rem; }
@@ -84,7 +37,7 @@
 </div>
 
 <div class="filtros">
-  <input type="search" placeholder="🔍 Buscar..." style="flex:1; max-width:320px;" />
+  <input type="search" placeholder="Buscar..." style="flex:1; max-width:320px;" />
   <select style="max-width:180px;">
     <option value="">Todos os estados</option>
     <option>RS</option><option>SC</option><option>PR</option>
@@ -105,20 +58,19 @@
       <div>
         <div class="prod-name">{{ p.nome }}</div>
         <div class="prod-loc">
-          {% if p.cidade and p.estado %}📍 {{ p.cidade }}, {{ p.estado }}
-          {% elif p.cidade %}📍 {{ p.cidade }}
-          {% elif p.estado %}📍 {{ p.estado }}
-          {% else %}📍 Localização não informada{% endif %}
+          <svg class="icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {% if p.cidade and p.estado %}{{ p.cidade }}, {{ p.estado }}
+          {% elif p.cidade %}{{ p.cidade }}
+          {% elif p.estado %}{{ p.estado }}
+          {% else %}Localização não informada{% endif %}
         </div>
       </div>
     </div>
-
     {% if p.bio %}
     <p class="prod-bio">{{ p.bio }}</p>
     {% else %}
     <p class="prod-bio" style="font-style:italic; opacity:0.5;">Sem descrição cadastrada.</p>
     {% endif %}
-
     <div class="prod-footer">
       <div class="prod-rating">
         <span class="stars">★</span>
@@ -142,5 +94,4 @@
   <a href="/cadastro" class="btn btn-primary mt-2" style="margin-top:1rem;">Cadastrar</a>
 </div>
 {% endif %}
-
 {% endblock %}
