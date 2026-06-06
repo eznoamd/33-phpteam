@@ -7,17 +7,10 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Principal</div>
       <a href="/dashboard" class="sidebar-link active"><span class="icon">📊</span> Dashboard</a>
+      <a href="/mercado"   class="sidebar-link"><span class="icon">🌾</span> Mercado</a>
 
-      {% if session_usuario.perfil == 'produtor' %}
-        <a href="/demandas"  class="sidebar-link"><span class="icon">📋</span> Demandas abertas</a>
-        <a href="/viagens"   class="sidebar-link"><span class="icon">🚛</span> Minhas viagens</a>
-
-      {% elif session_usuario.perfil == 'transportador' %}
-        <a href="/viagens"   class="sidebar-link"><span class="icon">🚛</span> Viagens disponíveis</a>
-
-      {% elif session_usuario.perfil == 'comprador' %}
-        <a href="/demandas"  class="sidebar-link"><span class="icon">📋</span> Minhas demandas</a>
-        <a href="/catalogo"  class="sidebar-link"><span class="icon">🌾</span> Produtores</a>
+      {% if session_usuario.perfil == 'transportador' %}
+        <a href="/mercado" class="sidebar-link"><span class="icon">🌾</span> Mercado</a>
       {% endif %}
     </div>
 
@@ -43,8 +36,8 @@
           <span style="color:var(--text-muted); font-size:0.8rem;">({{ session_usuario.total_avaliacoes }} aval.)</span>
         </p>
       </div>
-      {% if session_usuario.perfil == 'comprador' %}
-        <a href="/demandas" class="btn btn-primary">+ Nova demanda</a>
+      {% if session_usuario.perfil != 'transportador' %}
+        <a href="/mercado" class="btn btn-primary">+ Publicar oferta</a>
       {% endif %}
     </div>
 
@@ -53,73 +46,78 @@
 
       <div class="grid-2" style="margin-bottom:1.5rem;">
         <div class="card-sm">
-          <div class="card-label">Demandas abertas</div>
-          <div class="stat-num">{{ demandas_abertas|length }}</div>
-          <div class="stat-label">oportunidades disponíveis</div>
+          <div class="card-label">Minhas ofertas</div>
+          <div class="stat-num">{{ minhas_ofertas|length }}</div>
+          <div class="stat-label">publicadas</div>
         </div>
         <div class="card-sm">
-          <div class="card-label">Minhas viagens</div>
-          <div class="stat-num">{{ minhas_viagens|length }}</div>
-          <div class="stat-label">em andamento</div>
+          <div class="card-label">Contratos</div>
+          <div class="stat-num">{{ meus_contratos|length }}</div>
+          <div class="stat-label">fechados</div>
         </div>
       </div>
 
       <div class="card">
         <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Demandas abertas de compradores</div>
-          <a href="/demandas" class="btn btn-secondary btn-sm">Ver todas</a>
+          <div class="card-label" style="margin-bottom:0;">Demandas de compradores no mercado</div>
+          <a href="/mercado?tipo=QUERO_COMPRAR" class="btn btn-secondary btn-sm">Ver mercado</a>
         </div>
-        {% if demandas_abertas %}
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Produto</th><th>Qtd (kg)</th><th>Preço máx/kg</th><th>Entrega</th><th>Ação</th></tr></thead>
-            <tbody>
-            {% for d in demandas_abertas %}
-            <tr>
-              <td><strong>{{ d.tipo_produto }}</strong></td>
-              <td>{{ d.quantidade_kg|int }} kg</td>
-              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(d.preco_max_por_kg) }}</td>
-              <td style="color:var(--text-muted);">{{ d.data_limite_entrega.strftime('%d/%m/%Y') }}</td>
-              <td><a href="/demandas" class="btn btn-primary btn-sm">Aceitar</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+        {% if ofertas_disponiveis %}
+        <div style="display:flex; flex-direction:column; gap:0.65rem;">
+          {% for o in ofertas_disponiveis %}
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
+            <div>
+              <strong style="color:var(--white);">{{ o.produto }}</strong>
+              <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
+                {{ o.quantidade_total|int }} sacas
+                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}              </span>
+            </div>
+            <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
+          </div>
+          {% endfor %}
         </div>
         {% else %}
-        <div class="empty-state" style="padding:2rem;">
-          <div class="empty-state-icon">📋</div>
-          <p>Nenhuma demanda aberta no momento.</p>
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">📦</div>
+          <p>Nenhuma demanda de compra aberta no momento.</p>
         </div>
         {% endif %}
       </div>
 
       <div class="card">
-        <div class="card-label">Minhas viagens recentes</div>
-        {% if minhas_viagens %}
+        <div class="flex items-center justify-between mb-2">
+          <div class="card-label" style="margin-bottom:0;">Minhas ofertas recentes</div>
+          <a href="/mercado" class="btn btn-ghost btn-sm">Ver tudo</a>
+        </div>
+        {% if minhas_ofertas %}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Produto</th><th>Origem → Destino</th><th>Status</th><th>Data coleta</th></tr></thead>
+            <thead><tr><th>Produto</th><th>Qtd (sacas)</th><th>Status</th><th>Publicada em</th><th>Ação</th></tr></thead>
             <tbody>
-            {% for v in minhas_viagens %}
+            {% for o in minhas_ofertas %}
             <tr>
-              <td><strong>{{ v.tipo_produto }}</strong> — {{ v.peso_kg|int }} kg</td>
-              <td style="color:var(--text-soft);">{{ v.origem }} → {{ v.destino }}</td>
+              <td><strong>{{ o.produto }}</strong></td>
+              <td>{{ o.quantidade_total|int }}</td>
               <td>
-                <span class="badge {% if v.status == 'entregue' %}badge-green{% elif v.status == 'cancelada' %}badge-red{% elif v.status == 'aguardando_transportador' %}badge-yellow{% else %}badge-blue{% endif %}">
-                  {{ v.status.replace('_', ' ') }}
+                <span class="badge
+                  {% if o.status == 'ABERTA' %}badge-yellow
+                  {% elif o.status == 'EM_NEGOCIACAO' %}badge-blue
+                  {% else %}badge-gray{% endif %}">
+                  {{ o.status.lower().replace('_', ' ') }}
                 </span>
               </td>
-              <td style="color:var(--text-muted);">{{ v.data_coleta.strftime('%d/%m/%Y') }}</td>
+              <td style="color:var(--text-muted);">{{ o.criado_em.strftime('%d/%m/%Y') }}</td>
+              <td><a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a></td>
             </tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="empty-state" style="padding:2rem;">
-          <div class="empty-state-icon">🚛</div>
-          <p>Nenhuma viagem criada ainda.</p>
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">🌾</div>
+          <p>Nenhuma oferta publicada ainda.</p>
+          <a href="/mercado" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Publicar safra</a>
         </div>
         {% endif %}
       </div>
@@ -129,47 +127,77 @@
 
       <div class="grid-2" style="margin-bottom:1.5rem;">
         <div class="card-sm">
-          <div class="card-label">Viagens disponíveis</div>
-          <div class="stat-num">{{ viagens_disponiveis|length }}</div>
+          <div class="card-label">Fretes disponíveis</div>
+          <div class="stat-num">{{ fretes_disponiveis|length }}</div>
           <div class="stat-label">aguardando transportador</div>
         </div>
         <div class="card-sm">
-          <div class="card-label">Minhas viagens</div>
-          <div class="stat-num">{{ minhas_viagens|length }}</div>
-          <div class="stat-label">total aceitas</div>
+          <div class="card-label">Meus fretes</div>
+          <div class="stat-num">{{ meus_fretes|length }}</div>
+          <div class="stat-label">aceitos</div>
         </div>
       </div>
 
       <div class="card">
         <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Viagens disponíveis para aceitar</div>
-          <a href="/viagens" class="btn btn-secondary btn-sm">Ver todas</a>
+          <div class="card-label" style="margin-bottom:0;">Fretes disponíveis para aceitar</div>
         </div>
-        {% if viagens_disponiveis %}
+        {% if fretes_disponiveis %}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Produto</th><th>Rota</th><th>Peso</th><th>Coleta</th><th>Preço</th><th>Ação</th></tr></thead>
+            <thead><tr><th>Produto</th><th>Modalidade</th><th>Valor/saca</th><th>Responsável frete</th><th>Ação</th></tr></thead>
             <tbody>
-            {% for v in viagens_disponiveis %}
+            {% for c in fretes_disponiveis %}
             <tr>
-              <td><strong>{{ v.tipo_produto }}</strong></td>
-              <td style="color:var(--text-soft);">{{ v.origem }} → {{ v.destino }}</td>
-              <td>{{ v.peso_kg|int }} kg</td>
-              <td style="color:var(--text-muted);">{{ v.data_coleta.strftime('%d/%m/%Y') }}</td>
-              <td style="color:var(--verde-light);">R$ {{ "%.0f"|format(v.preco_final or 0) }}</td>
-              <td><a href="/viagens" class="btn btn-primary btn-sm">Aceitar</a></td>
+              <td><strong>{{ c.modalidade_venda.replace('_', ' ') }}</strong></td>
+              <td style="color:var(--text-soft);">{{ c.modalidade_venda.replace('_', ' ') }}</td>
+              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+              <td>
+                <span class="badge {% if c.responsavel_frete == 'VENDEDOR' %}badge-green{% else %}badge-blue{% endif %}">
+                  {{ c.responsavel_frete }}
+                </span>
+              </td>
+              <td><a href="/contratos/{{ c.id }}" class="btn btn-primary btn-sm">Ver frete</a></td>
             </tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="empty-state" style="padding:2rem;">
+        <div class="empty-state" style="padding:1.5rem;">
           <div class="empty-state-icon">🚛</div>
-          <p>Nenhuma viagem disponível no momento.</p>
+          <p>Nenhum frete disponível no momento.</p>
         </div>
         {% endif %}
       </div>
+
+      {% if meus_fretes %}
+      <div class="card">
+        <div class="card-label">Meus fretes</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Contrato</th><th>Valor/saca</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody>
+            {% for c in meus_fretes %}
+            <tr>
+              <td>#{{ c.id }}</td>
+              <td style="color:var(--verde-light);">R$ {{ "%.2f"|format(c.valor_saca_final) }}</td>
+              <td>
+                <span class="badge
+                  {% if c.status_logistica == 'ENTREGUE' %}badge-green
+                  {% elif c.status_logistica == 'EM_TRANSITO' %}badge-blue
+                  {% else %}badge-yellow{% endif %}">
+                  {{ c.status_logistica.lower().replace('_', ' ') }}
+                </span>
+              </td>
+              <td><a href="/contratos/{{ c.id }}" class="btn btn-ghost btn-sm">Detalhes</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
 
     <!-- ── COMPRADOR ─────────────────────────────── -->
     {% elif session_usuario.perfil == 'comprador' %}
@@ -177,47 +205,79 @@
       <div class="grid-2" style="margin-bottom:1.5rem;">
         <div class="card-sm">
           <div class="card-label">Minhas demandas</div>
-          <div class="stat-num">{{ minhas_demandas|length }}</div>
+          <div class="stat-num">{{ minhas_ofertas|length }}</div>
           <div class="stat-label">publicadas</div>
         </div>
         <div class="card-sm">
-          <div class="card-label">Entregas</div>
-          <div class="stat-num">{{ minhas_viagens|length }}</div>
-          <div class="stat-label">em andamento ou concluídas</div>
+          <div class="card-label">Contratos</div>
+          <div class="stat-num">{{ meus_contratos|length }}</div>
+          <div class="stat-label">fechados</div>
         </div>
       </div>
 
       <div class="card">
         <div class="flex items-center justify-between mb-2">
-          <div class="card-label" style="margin-bottom:0;">Minhas demandas</div>
-          <a href="/demandas" class="btn btn-primary btn-sm">+ Nova demanda</a>
+          <div class="card-label" style="margin-bottom:0;">Ofertas de venda no mercado</div>
+          <a href="/mercado?tipo=QUERO_VENDER" class="btn btn-secondary btn-sm">Ver mercado</a>
         </div>
-        {% if minhas_demandas %}
+        {% if ofertas_disponiveis %}
+        <div style="display:flex; flex-direction:column; gap:0.65rem;">
+          {% for o in ofertas_disponiveis %}
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border);">
+            <div>
+              <strong style="color:var(--white);">{{ o.produto }}</strong>
+              <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
+                {{ o.quantidade_total|int }} sacas
+                {% if o.preco_saca_inicial %} · R$ {{ "%.2f"|format(o.preco_saca_inicial) }}/saca{% endif %}
+                · {{ o.cidade_origem }}{% if o.estado_origem %}/{{ o.estado_origem }}{% endif %}
+              </span>
+            </div>
+            <a href="/negociacao/{{ o.id }}" class="btn btn-primary btn-sm">Negociar</a>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">🌾</div>
+          <p>Nenhuma oferta de venda aberta no momento.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="card-label" style="margin-bottom:0;">Minhas demandas publicadas</div>
+          <a href="/mercado" class="btn btn-primary btn-sm">+ Nova demanda</a>
+        </div>
+        {% if minhas_ofertas %}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Produto</th><th>Qtd</th><th>Preço máx/kg</th><th>Entrega</th><th>Status</th></tr></thead>
+            <thead><tr><th>Produto</th><th>Qtd (sacas)</th><th>Status</th><th>Publicada em</th><th>Ação</th></tr></thead>
             <tbody>
-            {% for d in minhas_demandas %}
+            {% for o in minhas_ofertas %}
             <tr>
-              <td><strong>{{ d.tipo_produto }}</strong></td>
-              <td>{{ d.quantidade_kg|int }} kg</td>
-              <td>R$ {{ "%.2f"|format(d.preco_max_por_kg) }}</td>
-              <td style="color:var(--text-muted);">{{ d.data_limite_entrega.strftime('%d/%m/%Y') }}</td>
+              <td><strong>{{ o.produto }}</strong></td>
+              <td>{{ o.quantidade_total|int }}</td>
               <td>
-                <span class="badge {% if d.status == 'aberta' %}badge-green{% elif d.status == 'aceita' %}badge-blue{% elif d.status == 'concluida' %}badge-gray{% else %}badge-red{% endif %}">
-                  {{ d.status }}
+                <span class="badge
+                  {% if o.status == 'ABERTA' %}badge-yellow
+                  {% elif o.status == 'EM_NEGOCIACAO' %}badge-blue
+                  {% else %}badge-gray{% endif %}">
+                  {{ o.status.lower().replace('_', ' ') }}
                 </span>
               </td>
+              <td style="color:var(--text-muted);">{{ o.criado_em.strftime('%d/%m/%Y') }}</td>
+              <td><a href="/negociacao/{{ o.id }}" class="btn btn-ghost btn-sm">Ver lances</a></td>
             </tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="empty-state" style="padding:2rem;">
-          <div class="empty-state-icon">📋</div>
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">📦</div>
           <p>Você ainda não publicou demandas.</p>
-          <a href="/demandas" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Publicar primeira demanda</a>
+          <a href="/mercado" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">Publicar demanda</a>
         </div>
         {% endif %}
       </div>

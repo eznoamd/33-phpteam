@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.usuario import Usuario
 from app.models.demanda import Demanda
 from app.models.viagem import Viagem
+from app.models.negociacao import OfertaMercado, NegociacaoLance, ContratoTransporte
 from app.seguranca import criar_token, hash_senha, verificar_senha
 
 router = APIRouter(tags=["Frontend"])
@@ -155,19 +156,49 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     ctx = {}
 
     if usuario.perfil == "produtor":
-        demandas_abertas = db.query(Demanda).filter(Demanda.status == "aberta").order_by(Demanda.criado_em.desc()).limit(10).all()
-        minhas_viagens = db.query(Viagem).filter(Viagem.produtor_id == usuario.id).order_by(Viagem.criado_em.desc()).limit(10).all()
-        ctx = {"demandas_abertas": demandas_abertas, "minhas_viagens": minhas_viagens}
+        minhas_ofertas = db.query(OfertaMercado).filter(
+            OfertaMercado.autor_id == usuario.id
+        ).order_by(OfertaMercado.id.desc()).limit(10).all()
+        meus_contratos = db.query(ContratoTransporte).filter(
+            ContratoTransporte.vendedor_id == usuario.id
+        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
+        ofertas_disponiveis = db.query(OfertaMercado).filter(
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
+            OfertaMercado.autor_id != usuario.id,
+            OfertaMercado.tipo_demanda == "QUERO_COMPRAR",
+        ).order_by(OfertaMercado.id.desc()).limit(5).all()
+        ctx = {
+            "minhas_ofertas": minhas_ofertas,
+            "meus_contratos": meus_contratos,
+            "ofertas_disponiveis": ofertas_disponiveis,
+        }
 
     elif usuario.perfil == "transportador":
-        viagens_disponiveis = db.query(Viagem).filter(Viagem.status == "aguardando_transportador").order_by(Viagem.criado_em.desc()).limit(10).all()
-        minhas_viagens = db.query(Viagem).filter(Viagem.transportador_id == usuario.id).order_by(Viagem.criado_em.desc()).limit(10).all()
-        ctx = {"viagens_disponiveis": viagens_disponiveis, "minhas_viagens": minhas_viagens}
+        fretes_disponiveis = db.query(ContratoTransporte).filter(
+            ContratoTransporte.status_logistica == "AGUARDANDO_TRANSPORTADOR"
+        ).order_by(ContratoTransporte.id.desc()).limit(10).all()
+        meus_fretes = db.query(ContratoTransporte).filter(
+            ContratoTransporte.transportador_id == usuario.id
+        ).order_by(ContratoTransporte.id.desc()).limit(10).all()
+        ctx = {"fretes_disponiveis": fretes_disponiveis, "meus_fretes": meus_fretes}
 
     elif usuario.perfil == "comprador":
-        minhas_demandas = db.query(Demanda).filter(Demanda.comprador_id == usuario.id).order_by(Demanda.criado_em.desc()).limit(10).all()
-        minhas_viagens = db.query(Viagem).filter(Viagem.comprador_id == usuario.id).order_by(Viagem.criado_em.desc()).limit(10).all()
-        ctx = {"minhas_demandas": minhas_demandas, "minhas_viagens": minhas_viagens}
+        minhas_ofertas = db.query(OfertaMercado).filter(
+            OfertaMercado.autor_id == usuario.id
+        ).order_by(OfertaMercado.id.desc()).limit(10).all()
+        meus_contratos = db.query(ContratoTransporte).filter(
+            ContratoTransporte.comprador_id == usuario.id
+        ).order_by(ContratoTransporte.id.desc()).limit(5).all()
+        ofertas_disponiveis = db.query(OfertaMercado).filter(
+            OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"]),
+            OfertaMercado.autor_id != usuario.id,
+            OfertaMercado.tipo_demanda == "QUERO_VENDER",
+        ).order_by(OfertaMercado.id.desc()).limit(5).all()
+        ctx = {
+            "minhas_ofertas": minhas_ofertas,
+            "meus_contratos": meus_contratos,
+            "ofertas_disponiveis": ofertas_disponiveis,
+        }
 
     return render("dashboard.html", request, db, **ctx)
 
@@ -196,3 +227,106 @@ def viagens_page(request: Request, db: Session = Depends(get_db)):
         return redirect_flash("/login", "info", "Faça login para acessar.")
     viagens = db.query(Viagem).filter(Viagem.status == "aguardando_transportador").order_by(Viagem.criado_em.desc()).all()
     return render("viagens.html", request, db, viagens=viagens)
+
+
+# ── Marketplace ───────────────────────────────────────────────────────────────
+
+@router.get("/mercado", response_class=HTMLResponse)
+def mercado_page(
+    request: Request,
+    produto: str = "",
+    tipo: str = "",
+    db: Session = Depends(get_db),
+):
+    q = db.query(OfertaMercado).filter(
+        OfertaMercado.status.in_(["ABERTA", "EM_NEGOCIACAO"])
+    )
+    if produto:
+        q = q.filter(OfertaMercado.produto.ilike(f"%{produto}%"))
+    if tipo:
+        q = q.filter(OfertaMercado.tipo_demanda == tipo.upper())
+    ofertas = q.order_by(OfertaMercado.id.desc()).limit(50).all()
+    return render("mercado.html", request, db, ofertas=ofertas, filtro_produto=produto, filtro_tipo=tipo)
+
+
+@router.get("/negociacao/{oferta_id}", response_class=HTMLResponse)
+def negociacao_page(oferta_id: int, request: Request, db: Session = Depends(get_db)):
+    usuario = get_session_usuario(request, db)
+    if not usuario:
+        return redirect_flash("/login", "info", "Faça login para negociar.")
+
+    oferta = db.query(OfertaMercado).filter(OfertaMercado.id == oferta_id).first()
+    if not oferta:
+        return redirect_flash("/mercado", "error", "Oferta não encontrada.")
+
+    lances = (
+        db.query(NegociacaoLance)
+        .filter(NegociacaoLance.oferta_id == oferta_id)
+        .order_by(NegociacaoLance.id)
+        .all()
+    )
+
+    ultimo_pendente = (
+        db.query(NegociacaoLance)
+        .filter(
+            NegociacaoLance.oferta_id == oferta_id,
+            NegociacaoLance.status_lance == "PENDENTE",
+        )
+        .order_by(NegociacaoLance.id.desc())
+        .first()
+    )
+
+    autor = db.query(Usuario).filter(Usuario.id == oferta.autor_id).first()
+    since_id = lances[-1].id if lances else 0
+
+    contrato = None
+    if oferta.status == "FECHADA":
+        contrato = db.query(ContratoTransporte).filter(
+            ContratoTransporte.oferta_id == oferta_id
+        ).first()
+
+    return render(
+        "negociacao.html",
+        request,
+        db,
+        oferta=oferta,
+        lances=lances,
+        ultimo_pendente=ultimo_pendente,
+        autor=autor,
+        since_id=since_id,
+        contrato=contrato,
+    )
+
+
+@router.get("/contratos/{contrato_id}", response_class=HTMLResponse)
+def contrato_page(contrato_id: int, request: Request, db: Session = Depends(get_db)):
+    usuario = get_session_usuario(request, db)
+    if not usuario:
+        return redirect_flash("/login", "info", "Faça login para acessar.")
+
+    contrato = db.query(ContratoTransporte).filter(ContratoTransporte.id == contrato_id).first()
+    if not contrato:
+        return redirect_flash("/mercado", "error", "Contrato não encontrado.")
+
+    partes = {contrato.vendedor_id, contrato.comprador_id, contrato.transportador_id}
+    if usuario.id not in partes and usuario.perfil != "transportador":
+        return redirect_flash("/dashboard", "error", "Acesso não autorizado.")
+
+    vendedor = db.query(Usuario).filter(Usuario.id == contrato.vendedor_id).first()
+    comprador = db.query(Usuario).filter(Usuario.id == contrato.comprador_id).first()
+    transportador = (
+        db.query(Usuario).filter(Usuario.id == contrato.transportador_id).first()
+        if contrato.transportador_id else None
+    )
+    oferta = db.query(OfertaMercado).filter(OfertaMercado.id == contrato.oferta_id).first()
+
+    return render(
+        "contrato.html",
+        request,
+        db,
+        contrato=contrato,
+        vendedor=vendedor,
+        comprador=comprador,
+        transportador=transportador,
+        oferta=oferta,
+    )

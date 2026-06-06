@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block title %}Negociação — {{ oferta.produto }}{% endblock %}
+
+{% block styles %}
+<style>
+.chat-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 200px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+}
+.chat-bubble {
+  max-width: 70%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.bubble-me {
+  align-self: flex-end;
+  background: rgba(110, 168, 50, 0.15);
+  border: 1px solid var(--verde-mid);
+}
+.bubble-them {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.bubble-valor {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--white);
+  font-family: var(--font-display);
+}
+.bubble-modal {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  margin-left: 0.5rem;
+}
+.bubble-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+.bubble-me .bubble-time { text-align: right; }
+.bubble-them .bubble-time { text-align: left; }
+.guardrail-bar {
+  background: rgba(110,168,50,0.08);
+  border: 1px solid rgba(110,168,50,0.25);
+  border-radius: var(--radius-lg);
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  margin-bottom: 1rem;
+}
+.guardrail-bar strong { color: var(--verde-light); }
+.resposta-bar {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+.chat-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block layout %}
+<div class="layout-sidebar">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Principal</div>
+      <a href="/dashboard"  class="sidebar-link"><span class="icon">📊</span> Dashboard</a>
+      <a href="/mercado"    class="sidebar-link active"><span class="icon">🌾</span> Mercado</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conta</div>
+      <a href="/perfil"      class="sidebar-link"><span class="icon">👤</span> Perfil</a>
+      <a href="/auth/logout" class="sidebar-link" style="color:var(--danger);"><span class="icon">🚪</span> Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% for msg in flash_messages %}
+      <div class="flash {{ msg.tipo }}">{{ msg.texto }}</div>
+    {% endfor %}
+
+    <!-- Cabeçalho da oferta -->
+    <div class="page-header">
+      <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <a href="/mercado" style="color:var(--text-muted); font-size:0.85rem;">← Mercado</a>
+        <span style="color:var(--border);">/</span>
+        <h1 style="margin:0;">{{ oferta.produto }}</h1>
+        <span class="badge {% if oferta.tipo_demanda == 'QUERO_VENDER' %}badge-green{% else %}badge-blue{% endif %}">
+          {% if oferta.tipo_demanda == 'QUERO_VENDER' %}Vende{% else %}Compra{% endif %}
+        </span>
+        <span class="badge {% if oferta.status == 'ABERTA' %}badge-yellow{% elif oferta.status == 'EM_NEGOCIACAO' %}badge-blue{% else %}badge-gray{% endif %}">
+          {{ oferta.status.lower().replace('_', ' ') }}
+        </span>
+      </div>
+      <p style="margin-top:0.4rem; color:var(--text-soft); font-size:0.88rem;">
+        {{ oferta.quantidade_total|int }} sacas ·
+        {% if oferta.preco_saca_inicial %}Referência R$ {{ "%.2f"|format(oferta.preco_saca_inicial) }}/saca · {% endif %}
+        Envio até {{ oferta.data_limite_envio.strftime('%d/%m/%Y') }} ·
+        📍 {{ oferta.cidade_origem }}{% if oferta.estado_origem %}/{{ oferta.estado_origem }}{% endif %}
+        · por <strong>{{ autor.nome.split()[0] }}</strong>
+      </p>
+    </div>
+
+    <!-- Guardrails IA -->
+    {% if oferta.ia_preco_minimo and oferta.ia_preco_maximo %}
+    <div class="guardrail-bar">
+      🤖 <strong>Guardrails da IA:</strong> lances aceitos entre
+      <strong>R$ {{ "%.2f"|format(oferta.ia_preco_minimo) }}</strong> e
+      <strong>R$ {{ "%.2f"|format(oferta.ia_preco_maximo) }}</strong>/saca
+    </div>
+    {% endif %}
+
+    <!-- Chat de lances -->
+    <div id="chat-container" class="chat-wrap">
+      {% if lances %}
+        {% for lance in lances %}
+        <div class="chat-bubble {% if lance.proponente_id == session_usuario.id %}bubble-me{% else %}bubble-them{% endif %}"
+             id="lance-{{ lance.id }}">
+          <div>
+            <span class="bubble-valor">R$ {{ "%.2f"|format(lance.valor_lance_saca) }}/saca</span>
+            <span class="bubble-modal">{{ lance.modalidade_venda.replace('_', ' ') }}</span>
+            <span class="badge badge-status
+              {% if lance.status_lance == 'ACEITO' %}badge-green
+              {% elif lance.status_lance == 'PENDENTE' %}badge-yellow
+              {% elif lance.status_lance == 'RECUSADO' %}badge-red
+              {% else %}badge-gray{% endif %}"
+              style="margin-left:0.4rem; font-size:0.65rem;">
+              {{ lance.status_lance.lower().replace('_', ' ') }}
+            </span>
+          </div>
+          <div class="bubble-time">{{ lance.criado_em.strftime('%d/%m às %H:%M') }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div id="chat-empty" class="chat-empty">
+          {% if oferta.autor_id == session_usuario.id %}
+            Aguardando o primeiro lance...
+          {% else %}
+            Nenhum lance ainda. Dê o primeiro lance abaixo!
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Área de ação -->
+    <div id="action-area">
+
+      {% if oferta.status == 'FECHADA' %}
+      <div class="flash success">
+        ✅ Negociação encerrada.
+        {% if contrato %}
+        <a href="/contratos/{{ contrato.id }}" class="btn btn-primary btn-sm" style="margin-left:1rem;">Ver contrato</a>
+        {% endif %}
+      </div>
+      {% else %}
+
+        <!-- Botões aceitar/recusar (só aparece se há lance PENDENTE da outra parte) -->
+        {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}
+        <div id="botoes-resposta" class="resposta-bar">
+          <p style="margin-bottom:0.6rem; font-size:0.88rem; color:var(--text-soft);">
+            Lance pendente:
+            <strong style="color:var(--white);">R$ {{ "%.2f"|format(ultimo_pendente.valor_lance_saca) }}/saca</strong>
+            — {{ ultimo_pendente.modalidade_venda.replace('_', ' ') }}
+          </p>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="responderLance({{ ultimo_pendente.id }}, 'ACEITAR')">✅ Aceitar</button>
+            <button class="btn" style="background:var(--danger); color:#fff;" onclick="responderLance({{ ultimo_pendente.id }}, 'RECUSAR')">❌ Recusar</button>
+            <button class="btn btn-ghost btn-sm" onclick="mostrarForm()">↩ Contraproposta</button>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Formulário de novo lance -->
+        <div id="form-lance" class="card"
+          {% if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id %}style="display:none;"{% endif %}
+          {% if oferta.autor_id == session_usuario.id and not lances %}style="display:none;"{% endif %}>
+          <div class="card-label" style="margin-bottom:0.85rem;">
+            {% if ultimo_pendente and ultimo_pendente.proponente_id == session_usuario.id %}
+              Lance pendente aguardando resposta...
+            {% else %}
+              {% if lances %}Contraproposta{% else %}Primeiro lance{% endif %}
+            {% endif %}
+          </div>
+          {% if ultimo_pendente and ultimo_pendente.proponente_id == session_usuario.id %}
+          <p style="color:var(--text-muted); font-size:0.85rem;">Aguarde a outra parte responder ao seu lance antes de enviar um novo.</p>
+          {% else %}
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Valor por saca (R$)
+                {% if oferta.ia_preco_minimo and oferta.ia_preco_maximo %}
+                <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">
+                  (R$ {{ "%.0f"|format(oferta.ia_preco_minimo) }}–{{ "%.0f"|format(oferta.ia_preco_maximo) }})
+                </span>
+                {% endif %}
+              </label>
+              <input type="number" id="valor_lance" step="0.01" min="0.01"
+                     placeholder="Ex: 148.50"
+                     {% if oferta.preco_saca_inicial %}value="{{ "%.2f"|format(oferta.preco_saca_inicial) }}"{% endif %} />
+            </div>
+            <div class="form-group">
+              <label>Modalidade de entrega</label>
+              <select id="modalidade_venda">
+                <option value="">Selecione...</option>
+                <option value="FOB_FAZENDA">FOB Fazenda (comprador retira na fazenda)</option>
+                <option value="FOB_ARMAZEM">FOB Armazém (comprador retira no armazém)</option>
+                <option value="CIF">CIF (vendedor entrega — frete incluso)</option>
+                <option value="POSTO_INDUSTRIA">Posto Indústria</option>
+                <option value="POSTO_COOPERATIVA">Posto Cooperativa</option>
+                <option value="POSTO_PORTO">Posto Porto</option>
+                <option value="VENDA_A_RETIRAR">Venda a Retirar</option>
+                <option value="BARTER">Barter (permuta)</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2" style="justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="enviarLance()">Enviar lance</button>
+          </div>
+          <div id="msg-lance" style="display:none; margin-top:0.6rem;"></div>
+          {% endif %}
+        </div>
+
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const OFERTA_ID = {{ oferta.id }};
+const MY_ID = {{ session_usuario.id }};
+const SINCE_ID = {{ since_id }};
+const OFERTA_STATUS = "{{ oferta.status }}";
+
+function getCookie(name) {
+  return document.cookie.split(';').find(c => c.trim().startsWith(name + '='))?.split('=')[1];
+}
+
+function badgeClass(status) {
+  switch (status) {
+    case 'ACEITO':        return 'badge-green';
+    case 'PENDENTE':      return 'badge-yellow';
+    case 'RECUSADO':      return 'badge-red';
+    case 'CONTRAPROPOSTA': return 'badge-gray';
+    default:              return 'badge-gray';
+  }
+}
+
+function scrollChat() {
+  const c = document.getElementById('chat-container');
+  c.scrollTop = c.scrollHeight;
+}
+scrollChat();
+
+// ── SSE ──────────────────────────────────────────────────────────────────────
+if (OFERTA_STATUS !== 'FECHADA') {
+  const es = new EventSource(`/ofertas/${OFERTA_ID}/eventos?since_id=${SINCE_ID}`);
+
+  es.addEventListener('novo_lance', e => {
+    const lance = JSON.parse(e.data);
+    if (!document.getElementById('lance-' + lance.id)) {
+      appendBubble(lance);
+    }
+    updateActionAreaFromLance(lance);
+  });
+
+  es.addEventListener('lance_atualizado', e => {
+    const lance = JSON.parse(e.data);
+    const el = document.getElementById('lance-' + lance.id);
+    if (el) {
+      const badge = el.querySelector('.badge-status');
+      if (badge) {
+        badge.className = 'badge badge-status ' + badgeClass(lance.status_lance);
+        badge.textContent = lance.status_lance.toLowerCase().replace(/_/g, ' ');
+      }
+    }
+    updateActionAreaFromLance(lance);
+  });
+
+  es.addEventListener('contrato_criado', e => {
+    const c = JSON.parse(e.data);
+    handleContratoCreado(c);
+  });
+}
+
+function appendBubble(lance) {
+  const empty = document.getElementById('chat-empty');
+  if (empty) empty.remove();
+
+  const isMe = lance.proponente_id === MY_ID;
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + (isMe ? 'bubble-me' : 'bubble-them');
+  div.id = 'lance-' + lance.id;
+
+  const dt = new Date(lance.criado_em);
+  const fmtTime = dt.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+
+  div.innerHTML = `
+    <div>
+      <span class="bubble-valor">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</span>
+      <span class="bubble-modal">${lance.modalidade_venda.replace(/_/g, ' ')}</span>
+      <span class="badge badge-status ${badgeClass(lance.status_lance)}"
+            style="margin-left:0.4rem; font-size:0.65rem;">
+        ${lance.status_lance.toLowerCase().replace(/_/g, ' ')}
+      </span>
+    </div>
+    <div class="bubble-time">${fmtTime}</div>
+  `;
+  document.getElementById('chat-container').appendChild(div);
+  scrollChat();
+}
+
+let pendenteLanceId = {{ ultimo_pendente.id if ultimo_pendente and ultimo_pendente.proponente_id != session_usuario.id else 'null' }};
+
+function updateActionAreaFromLance(lance) {
+  const formLance = document.getElementById('form-lance');
+  const botoesResp = document.getElementById('botoes-resposta');
+
+  if (lance.status_lance === 'PENDENTE' && lance.proponente_id !== MY_ID) {
+    pendenteLanceId = lance.id;
+    // Atualiza botões de resposta
+    if (botoesResp) {
+      botoesResp.style.display = 'block';
+      botoesResp.querySelector('p').innerHTML =
+        `Lance pendente: <strong style="color:var(--white)">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong> — ${lance.modalidade_venda.replace(/_/g, ' ')}`;
+      const aceitarBtn = botoesResp.querySelector('.btn-primary');
+      aceitarBtn.onclick = () => responderLance(lance.id, 'ACEITAR');
+      const recusarBtn = botoesResp.querySelectorAll('.btn')[1];
+      recusarBtn.onclick = () => responderLance(lance.id, 'RECUSAR');
+    } else {
+      // Cria div de botões dinamicamente
+      const div = document.createElement('div');
+      div.id = 'botoes-resposta';
+      div.className = 'resposta-bar';
+      div.innerHTML = `
+        <p style="margin-bottom:0.6rem; font-size:0.88rem; color:var(--text-soft);">
+          Lance pendente: <strong style="color:var(--white)">R$ ${lance.valor_lance_saca.toFixed(2)}/saca</strong> — ${lance.modalidade_venda.replace(/_/g, ' ')}
+        </p>
+        <div class="flex gap-2">
+          <button class="btn btn-primary btn-sm" onclick="responderLance(${lance.id}, 'ACEITAR')">✅ Aceitar</button>
+          <button class="btn btn-sm" style="background:var(--danger); color:#fff;" onclick="responderLance(${lance.id}, 'RECUSAR')">❌ Recusar</button>
+          <button class="btn btn-ghost btn-sm" onclick="mostrarForm()">↩ Contraproposta</button>
+        </div>
+      `;
+      document.getElementById('action-area').prepend(div);
+    }
+    if (formLance) formLance.style.display = 'none';
+  } else if (lance.status_lance === 'PENDENTE' && lance.proponente_id === MY_ID) {
+    if (botoesResp) botoesResp.style.display = 'none';
+    if (formLance) formLance.style.display = 'none';
+  } else if (lance.status_lance === 'RECUSADO' || lance.status_lance === 'CONTRAPROPOSTA') {
+    if (botoesResp) botoesResp.style.display = 'none';
+    if (formLance) formLance.style.display = 'block';
+  }
+}
+
+function mostrarForm() {
+  const f = document.getElementById('form-lance');
+  if (f) {
+    f.style.display = 'block';
+    f.scrollIntoView({behavior: 'smooth'});
+  }
+}
+
+function handleContratoCreado(c) {
+  const actionArea = document.getElementById('action-area');
+  const f = document.getElementById('form-lance');
+  const b = document.getElementById('botoes-resposta');
+  if (f) f.style.display = 'none';
+  if (b) b.style.display = 'none';
+
+  const banner = document.createElement('div');
+  banner.className = 'flash success';
+  banner.innerHTML = `
+    ✅ Contrato fechado! Responsável pelo frete: <strong>${c.responsavel_frete}</strong>
+    — R$ ${c.valor_saca_final?.toFixed(2)}/saca —
+    <a href="/contratos/${c.contrato_id}" class="btn btn-primary btn-sm" style="margin-left:0.75rem;">Ver contrato</a>
+  `;
+  actionArea.prepend(banner);
+}
+
+// ── Enviar lance ─────────────────────────────────────────────────────────────
+async function enviarLance() {
+  const token = getCookie('agrohub_session');
+  const valor = parseFloat(document.getElementById('valor_lance').value);
+  const modalidade = document.getElementById('modalidade_venda').value;
+  const div = document.getElementById('msg-lance');
+
+  if (!valor || !modalidade) {
+    div.style.display = 'block';
+    div.className = 'flash error';
+    div.textContent = '❌ Preencha o valor e a modalidade.';
+    return;
+  }
+
+  const res = await fetch(`/ofertas/${OFERTA_ID}/lances`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify({valor_lance_saca: valor, modalidade_venda: modalidade}),
+  });
+
+  if (res.ok) {
+    document.getElementById('valor_lance').value = '';
+    document.getElementById('modalidade_venda').value = '';
+    div.style.display = 'none';
+    // O SSE trará o novo bubble automaticamente
+    document.getElementById('form-lance').style.display = 'none';
+  } else {
+    const d = await res.json();
+    div.style.display = 'block';
+    div.className = 'flash error';
+    div.textContent = '❌ ' + (d.detail || 'Erro ao enviar lance.');
+  }
+}
+
+// ── Aceitar / Recusar ─────────────────────────────────────────────────────────
+async function responderLance(lanceId, acao) {
+  const token = getCookie('agrohub_session');
+  const res = await fetch(`/ofertas/${OFERTA_ID}/lances/${lanceId}/responder`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+    body: JSON.stringify({acao}),
+  });
+
+  if (res.ok) {
+    const d = await res.json();
+    if (d.resultado === 'ACEITO') {
+      handleContratoCreado(d);
+    } else {
+      // RECUSADO — mostra form novamente
+      const b = document.getElementById('botoes-resposta');
+      if (b) b.style.display = 'none';
+      const f = document.getElementById('form-lance');
+      if (f) f.style.display = 'block';
+    }
+  } else {
+    const d = await res.json();
+    alert('❌ ' + (d.detail || 'Erro.'));
+  }
+}
+</script>
+{% endblock %}
