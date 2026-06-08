@@ -1,4 +1,4 @@
-# 🚜 AgroHub - CodeRace 2024
+# 🚜 AgroHub - CodeRace 2026
 Conectando quem produz, transporta e movimenta o agro.
 
 > Assista ao Pitch de 3 minutos aqui: https://youtu.be/eFlkO_FAPpw
@@ -71,4 +71,4 @@ uvicorn main:app --reload
 
 Acesse: **http://127.0.0.1:8000**  
 
-Desenvolvido em 10 horas durante a CodeRace 2024.
+Desenvolvido em 10 horas durante a CodeRace 2026.
